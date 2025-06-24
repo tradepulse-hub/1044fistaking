@@ -165,7 +165,7 @@ interface UserInfo {
 }
 
 class DrachmaStakingService {
-  private provider: ethers.JsonRpcProvider | null = null
+  private provider: ethers.providers.JsonRpcProvider | null = null
   private contract: ethers.Contract | null = null
   private initialized = false
 
@@ -183,7 +183,7 @@ class DrachmaStakingService {
       console.log(`📋 Contract Address: ${DRACHMA_STAKING_CONTRACT}`)
       console.log(`📋 WDD Token Address: ${WDD_TOKEN}`)
 
-      this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
+      this.provider = new ethers.providers.JsonRpcProvider(WORLDCHAIN_RPC)
       const network = await this.provider.getNetwork()
       console.log(`🌐 Connected to network: ${network.name} (${network.chainId})`)
 
@@ -200,7 +200,7 @@ class DrachmaStakingService {
         console.log(`✅ Drachma Reward Token (WDD): ${tokenAddresses[1]}`)
 
         const rewardBalance = await this.contract.getRewardBalance()
-        console.log(`✅ Drachma Reward Balance: ${ethers.formatEther(rewardBalance)}`)
+        console.log(`✅ Drachma Reward Balance: ${ethers.utils.formatEther(rewardBalance)}`)
       } catch (error) {
         console.warn("⚠️ Drachma contract test calls failed:", error)
       }
@@ -238,7 +238,7 @@ class DrachmaStakingService {
       console.log(`📋 Drachma APY FIXED: ${contractAPY}%`)
 
       // Calcular recompensas por segundo usando APY FIXA de 0.01%
-      const tpfBalance = Number(ethers.formatEther(userInfo[0]))
+      const tpfBalance = Number(ethers.utils.formatEther(userInfo[0]))
       const apy = 0.0001 // 0.01% em decimal
       const rewardsPerSecond = (tpfBalance * apy) / (365 * 24 * 60 * 60)
 
@@ -248,14 +248,14 @@ class DrachmaStakingService {
       console.log(`   - Rewards per second: ${rewardsPerSecond}`)
 
       // Verificar se as recompensas pendentes estão corretas
-      const pendingRewards = ethers.formatEther(userInfo[1])
+      const pendingRewards = ethers.utils.formatEther(userInfo[1])
       console.log(`📋 Drachma pending rewards from contract: ${pendingRewards}`)
 
       const result = {
-        tpfBalance: ethers.formatEther(userInfo[0]),
+        tpfBalance: ethers.utils.formatEther(userInfo[0]),
         pendingRewards,
         lastClaimTime: Number(userInfo[2]),
-        totalClaimed: ethers.formatEther(userInfo[3]),
+        totalClaimed: ethers.utils.formatEther(userInfo[3]),
         rewardsPerSecond: rewardsPerSecond.toFixed(18),
         contractAPY,
         canClaim,
@@ -378,7 +378,7 @@ class DrachmaStakingService {
       console.log(`APY: ${Number(apy) / 100}%`)
       console.log(`TPF Token: ${tokenAddresses[0]}`)
       console.log(`Reward Token (WDD): ${tokenAddresses[1]}`)
-      console.log(`Reward Balance: ${ethers.formatEther(rewardBalance)}`)
+      console.log(`Reward Balance: ${ethers.utils.formatEther(rewardBalance)}`)
 
       return apy >= 0 && tokenAddresses[0] === TPF_TOKEN && tokenAddresses[1] === WDD_TOKEN
     } catch (error) {

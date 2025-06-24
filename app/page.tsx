@@ -1,21 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  Wallet,
-  AlertCircle,
-  FolderOpen,
-  Info,
-  Home,
-  Wifi,
-  Shield,
-  Mail,
-  ExternalLink,
-  Lightbulb,
-  Zap,
-} from "lucide-react"
+import { Wallet, FolderOpen, Info, Home, Wifi, Shield, Mail, ExternalLink, Lightbulb, Zap } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { MiniKit } from "@worldcoin/minikit-js"
@@ -24,9 +12,7 @@ import { softStakingService } from "@/services/soft-staking-service"
 import { softTransactionService } from "@/services/soft-transaction-service"
 import { drachmaStakingService } from "@/services/drachma-staking-service"
 import { drachmaTransactionService } from "@/services/drachma-transaction-service"
-import { useTransactionMonitor } from "@/hooks/use-transaction-monitor"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useRef } from "react"
+import { LoadingIndicator } from "@/components/loading-indicator"
 
 // Temporary lightweight logger after removing debug tools
 const errorLogger = {
@@ -48,17 +34,15 @@ export default function TPTStakingApp() {
   // Drachma Token State - NO COUNTER
   const [drachmaPendingRewards, setDrachmaPendingRewards] = useState("Surprise!")
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // For transaction progress (0-100%)
+  const [loadingProgress, setLoadingProgress] = useState(0) // New state for loading progress
+  const [isRefreshing, setIsRefreshing] = useState(false) // For background data refresh
   const [networkError, setNetworkError] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
 
-  const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null)
-  const [currentTransactionType, setCurrentTransactionType] = useState<"tpt" | "drachma" | null>(null)
-
   const tptRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  const transactionStatus = useTransactionMonitor(currentTransactionId)
+  const loadingProgressIntervalRef = useRef<NodeJS.Timeout | null>(null) // Ref for loading progress interval
+  const audioRef = useRef<HTMLAudioElement | null>(null) // Ref for audio element
 
   useEffect(() => {
     checkSession()
@@ -66,6 +50,7 @@ export default function TPTStakingApp() {
 
   const checkSession = async () => {
     try {
+      setIsRefreshing(true) // Start refreshing for session check
       const response = await fetch("/api/session")
 
       if (response.ok) {
@@ -84,12 +69,16 @@ export default function TPTStakingApp() {
       errorLogger.logError("Session Check Failed", `Failed to check existing session: ${error}`, {
         error: error instanceof Error ? error.message : String(error),
       })
+    } finally {
+      setIsRefreshing(false) // End refreshing for session check
     }
   }
 
   const connectWorldWallet = async () => {
     try {
       setIsLoading(true)
+      setLoadingProgress(0) // Reset progress on start
+      audioRef.current?.play() // Play loading sound
 
       if (!MiniKit.isInstalled()) {
         console.log("Please open in World App")
@@ -156,13 +145,16 @@ export default function TPTStakingApp() {
       console.log("Connection failed, please try again")
     } finally {
       setIsLoading(false)
+      setLoadingProgress(0) // Reset progress on finish
+      audioRef.current?.pause() // Pause loading sound
+      audioRef.current?.load() // Reset audio to start
     }
   }
 
   // Carregar dados de todos os tokens
   const loadUserData = async (userAddress: string) => {
     try {
-      setIsRefreshing(true)
+      setIsRefreshing(true) // Start refreshing for data load
 
       console.log("🔄 Loading user data for TPT and Drachma...")
 
@@ -207,7 +199,7 @@ export default function TPTStakingApp() {
         error: error instanceof Error ? error.message : String(error),
       })
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false) // End refreshing for data load
     }
   }
 
@@ -267,57 +259,112 @@ export default function TPTStakingApp() {
     }
   }, [isConnected, tptRewardsPerSecond])
 
+  // Loading progress animation for transactions
+  useEffect(() => {
+    if (isLoading) {
+      setLoadingProgress(0) // Ensure it starts from 0
+      loadingProgressIntervalRef.current = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 95) {
+            // Stop at 95% to indicate it's almost done but waiting for confirmation
+            clearInterval(loadingProgressIntervalRef.current!)
+            return 95
+          }
+          return prev + 1 // Increment by 1%
+        })
+      }, 50) // Update every 50ms for a smooth animation
+    } else {
+      if (loadingProgressIntervalRef.current) {
+        clearInterval(loadingProgressIntervalRef.current)
+      }
+      setLoadingProgress(0) // Reset to 0 when not loading
+    }
+    return () => {
+      if (loadingProgressIntervalRef.current) {
+        clearInterval(loadingProgressIntervalRef.current)
+      }
+    }
+  }, [isLoading])
+
   const handleClaimTPTRewards = async () => {
     try {
       setIsLoading(true)
+      audioRef.current?.play() // Play loading sound
 
       const result = await softTransactionService.executeClaimRewards()
 
-      if (result.success && result.transactionId) {
-        setCurrentTransactionId(result.transactionId)
-        setCurrentTransactionType("tpt")
-
+      if (result.success) {
         // Reset pending rewards
         setTptPendingRewards("0.0")
+        toast({
+          title: "TPT Rewards Claimed!",
+          description: `Transaction: ${result.transactionId?.slice(0, 10)}...`,
+        })
       } else {
         errorLogger.logError("TPT Claim Failed", result.error || "Claim transaction failed", result)
-        console.log("TPT claim failed, please try again")
+        toast({
+          title: "TPT Claim Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       const errorMsg = "Failed to execute TPT claim transaction"
       errorLogger.logError("TPT Claim UI Error", errorMsg, {
         error: error instanceof Error ? error.message : String(error),
       })
-      console.log("Transaction failed, please try again")
+      toast({
+        title: "TPT Claim Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
+      setLoadingProgress(100) // Set to 100% briefly before resetting
+      setTimeout(() => setLoadingProgress(0), 300) // Reset after a short delay
+      audioRef.current?.pause() // Pause loading sound
+      audioRef.current?.load() // Reset audio to start
     }
   }
 
   const handleClaimDrachmaRewards = async () => {
     try {
       setIsLoading(true)
+      audioRef.current?.play() // Play loading sound
 
       const result = await drachmaTransactionService.executeClaimRewards()
 
-      if (result.success && result.transactionId) {
-        setCurrentTransactionId(result.transactionId)
-        setCurrentTransactionType("drachma")
-
+      if (result.success) {
         // Keep "Surprise!" after claim
         setDrachmaPendingRewards("Surprise!")
+        toast({
+          title: "WDD Rewards Claimed!",
+          description: `Transaction: ${result.transactionId?.slice(0, 10)}...`,
+        })
       } else {
         errorLogger.logError("Drachma Claim Failed", result.error || "Claim transaction failed", result)
-        console.log("Drachma claim failed, please try again")
+        toast({
+          title: "WDD Claim Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       const errorMsg = "Failed to execute Drachma claim transaction"
       errorLogger.logError("Drachma Claim UI Error", errorMsg, {
         error: error instanceof Error ? error.message : String(error),
       })
-      console.log("Transaction failed, please try again")
+      toast({
+        title: "WDD Claim Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
+      setLoadingProgress(100) // Set to 100% briefly before resetting
+      setTimeout(() => setLoadingProgress(0), 300) // Reset after a short delay
+      audioRef.current?.pause() // Pause loading sound
+      audioRef.current?.load() // Reset audio to start
     }
   }
 
@@ -400,7 +447,7 @@ export default function TPTStakingApp() {
 
                   {/* Project Info */}
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-white">TPulseFi</h4>
+                    <h4 className="text-sm font-bold text-white">TPulseFi</h4>
                     <p className="text-xs text-slate-400">Multi-Token Soft Staking on World Chain</p>
 
                     <a
@@ -592,7 +639,9 @@ export default function TPTStakingApp() {
         {/* TPF Balance - COMPACT TOP */}
         <div className="text-center py-2 ios-safe-top">
           <div className="text-xs text-slate-400 mb-1 ios-text-fix">Your TPF Balance</div>
-          <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
+          </div>
         </div>
 
         {/* ENGLISH MESSAGE */}
@@ -636,6 +685,9 @@ export default function TPTStakingApp() {
               </div>
             </div>
 
+            {/* Loading Indicator */}
+            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} isRefreshing={isRefreshing} />
+
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
               <Button
@@ -644,7 +696,7 @@ export default function TPTStakingApp() {
                 className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-white font-semibold text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 ios-button-fix"
               >
                 <div className="flex items-center gap-1">
-                  {isLoading && currentTransactionType === "tpt" ? (
+                  {isLoading ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span className="ios-text-fix">CLAIMING...</span>
@@ -686,6 +738,9 @@ export default function TPTStakingApp() {
               </div>
             </div>
 
+            {/* Loading Indicator */}
+            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} isRefreshing={isRefreshing} />
+
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
               <Button
@@ -694,7 +749,7 @@ export default function TPTStakingApp() {
                 className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-white font-semibold text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 ios-button-fix"
               >
                 <div className="flex items-center gap-1">
-                  {isLoading && currentTransactionType === "drachma" ? (
+                  {isLoading ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span className="ios-text-fix">CLAIMING...</span>
@@ -723,6 +778,9 @@ export default function TPTStakingApp() {
         <div className="elegant-lines-bg"></div>
       </div>
 
+      {/* Audio element for loading sound */}
+      <audio ref={audioRef} src="/loading-sound.mp3" loop preload="auto" crossOrigin="anonymous" />
+
       {/* Main container */}
       {!isConnected ? (
         // Full screen connect page
@@ -730,34 +788,6 @@ export default function TPTStakingApp() {
       ) : (
         // Normal interface with menu
         <>
-          {transactionStatus && (
-            <Alert
-              className={`bg-slate-900/50 border-slate-600/30 py-1 mx-3 relative z-10 ${
-                transactionStatus.transactionStatus === "confirmed"
-                  ? "border-emerald-600/30"
-                  : transactionStatus.transactionStatus === "failed"
-                    ? "border-red-600/30"
-                    : "border-amber-600/30"
-              }`}
-            >
-              <AlertCircle
-                className={`h-3 w-3 ${
-                  transactionStatus.transactionStatus === "confirmed"
-                    ? "text-emerald-400"
-                    : transactionStatus.transactionStatus === "failed"
-                      ? "text-red-400"
-                      : "text-amber-400"
-                }`}
-              />
-              <AlertDescription className="text-slate-400 text-xs font-mono ios-text-fix">
-                {transactionStatus.transactionStatus === "pending" && "Transaction pending..."}
-                {transactionStatus.transactionStatus === "confirmed" &&
-                  `${currentTransactionType === "tpt" ? "TPT" : "WDD"} rewards claimed!`}
-                {transactionStatus.transactionStatus === "failed" && "Transaction failed"}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Content */}
           <div className="relative z-10 ios-safe-x pb-20 min-h-screen flex flex-col justify-center">
             <div className="max-w-sm mx-auto space-y-3">

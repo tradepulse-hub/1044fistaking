@@ -1,22 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  Wallet,
-  AlertCircle,
-  FolderOpen,
-  Info,
-  Home,
-  Wifi,
-  Shield,
-  Mail,
-  ExternalLink,
-  Lightbulb,
-  Zap,
-  ArrowLeftRight,
-} from "lucide-react"
+import { Wallet, FolderOpen, Info, Home, Wifi, Shield, Mail, ExternalLink, Lightbulb, Zap } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { MiniKit } from "@worldcoin/minikit-js"
@@ -25,11 +12,7 @@ import { softStakingService } from "@/services/soft-staking-service"
 import { softTransactionService } from "@/services/soft-transaction-service"
 import { drachmaStakingService } from "@/services/drachma-staking-service"
 import { drachmaTransactionService } from "@/services/drachma-transaction-service"
-import { useTransactionMonitor } from "@/hooks/use-transaction-monitor"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useRef } from "react"
-import { SwapInterface } from "@/components/swap-interface"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { LoadingIndicator } from "@/components/loading-indicator" // New import
 
 // Temporary lightweight logger after removing debug tools
 const errorLogger = {
@@ -56,14 +39,8 @@ export default function TPTStakingApp() {
   const [networkError, setNetworkError] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
 
-  const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null)
-  const [currentTransactionType, setCurrentTransactionType] = useState<"tpt" | "drachma" | null>(null)
-
   const tptRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  const transactionStatus = useTransactionMonitor(currentTransactionId)
-
-  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null) // Ref for audio element
 
   useEffect(() => {
     checkSession()
@@ -275,54 +252,78 @@ export default function TPTStakingApp() {
   const handleClaimTPTRewards = async () => {
     try {
       setIsLoading(true)
+      audioRef.current?.play() // Play loading sound
 
       const result = await softTransactionService.executeClaimRewards()
 
-      if (result.success && result.transactionId) {
-        setCurrentTransactionId(result.transactionId)
-        setCurrentTransactionType("tpt")
-
+      if (result.success) {
         // Reset pending rewards
         setTptPendingRewards("0.0")
+        toast({
+          title: "TPT Rewards Claimed!",
+          description: `Transaction: ${result.transactionId?.slice(0, 10)}...`,
+        })
       } else {
         errorLogger.logError("TPT Claim Failed", result.error || "Claim transaction failed", result)
-        console.log("TPT claim failed, please try again")
+        toast({
+          title: "TPT Claim Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       const errorMsg = "Failed to execute TPT claim transaction"
       errorLogger.logError("TPT Claim UI Error", errorMsg, {
         error: error instanceof Error ? error.message : String(error),
       })
-      console.log("Transaction failed, please try again")
+      toast({
+        title: "TPT Claim Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
+      audioRef.current?.pause() // Pause loading sound
+      audioRef.current?.load() // Reset audio to start
     }
   }
 
   const handleClaimDrachmaRewards = async () => {
     try {
       setIsLoading(true)
+      audioRef.current?.play() // Play loading sound
 
       const result = await drachmaTransactionService.executeClaimRewards()
 
-      if (result.success && result.transactionId) {
-        setCurrentTransactionId(result.transactionId)
-        setCurrentTransactionType("drachma")
-
+      if (result.success) {
         // Keep "Surprise!" after claim
         setDrachmaPendingRewards("Surprise!")
+        toast({
+          title: "WDD Rewards Claimed!",
+          description: `Transaction: ${result.transactionId?.slice(0, 10)}...`,
+        })
       } else {
         errorLogger.logError("Drachma Claim Failed", result.error || "Claim transaction failed", result)
-        console.log("Drachma claim failed, please try again")
+        toast({
+          title: "WDD Claim Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       const errorMsg = "Failed to execute Drachma claim transaction"
       errorLogger.logError("Drachma Claim UI Error", errorMsg, {
         error: error instanceof Error ? error.message : String(error),
       })
-      console.log("Transaction failed, please try again")
+      toast({
+        title: "WDD Claim Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
+      audioRef.current?.pause() // Pause loading sound
+      audioRef.current?.load() // Reset audio to start
     }
   }
 
@@ -599,26 +600,6 @@ export default function TPTStakingApp() {
           <div className="text-xs text-slate-400 mb-1 ios-text-fix">Your TPF Balance</div>
           <div className="flex items-center justify-center gap-2">
             <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
-
-            {/* Swap Icon */}
-            <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
-              <DialogTrigger asChild>
-                <button className="p-1 rounded-full bg-slate-700/50 hover:bg-slate-600/50 transition-colors border border-slate-600/30 hover:border-slate-500/50">
-                  <ArrowLeftRight className="h-3 w-3 text-slate-300" />
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md bg-slate-900/95 border-slate-700/50 backdrop-blur-xl">
-                <DialogHeader>
-                  <DialogTitle className="text-slate-300 flex items-center gap-2">
-                    <ArrowLeftRight className="h-4 w-4" />
-                    Token Swap
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="mt-4">
-                  <SwapInterface userAddress={walletAddress} />
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 
@@ -663,6 +644,9 @@ export default function TPTStakingApp() {
               </div>
             </div>
 
+            {/* Loading Indicator */}
+            <LoadingIndicator isLoading={isLoading} />
+
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
               <Button
@@ -671,7 +655,7 @@ export default function TPTStakingApp() {
                 className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-white font-semibold text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 ios-button-fix"
               >
                 <div className="flex items-center gap-1">
-                  {isLoading && currentTransactionType === "tpt" ? (
+                  {isLoading ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span className="ios-text-fix">CLAIMING...</span>
@@ -713,6 +697,9 @@ export default function TPTStakingApp() {
               </div>
             </div>
 
+            {/* Loading Indicator */}
+            <LoadingIndicator isLoading={isLoading} />
+
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
               <Button
@@ -721,7 +708,7 @@ export default function TPTStakingApp() {
                 className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-white font-semibold text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 ios-button-fix"
               >
                 <div className="flex items-center gap-1">
-                  {isLoading && currentTransactionType === "drachma" ? (
+                  {isLoading ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span className="ios-text-fix">CLAIMING...</span>
@@ -750,6 +737,9 @@ export default function TPTStakingApp() {
         <div className="elegant-lines-bg"></div>
       </div>
 
+      {/* Audio element for loading sound */}
+      <audio ref={audioRef} src="/placeholder.mp3?query=loading%20sound" loop preload="auto" />
+
       {/* Main container */}
       {!isConnected ? (
         // Full screen connect page
@@ -757,34 +747,6 @@ export default function TPTStakingApp() {
       ) : (
         // Normal interface with menu
         <>
-          {transactionStatus && (
-            <Alert
-              className={`bg-slate-900/50 border-slate-600/30 py-1 mx-3 relative z-10 ${
-                transactionStatus.transactionStatus === "confirmed"
-                  ? "border-emerald-600/30"
-                  : transactionStatus.transactionStatus === "failed"
-                    ? "border-red-600/30"
-                    : "border-amber-600/30"
-              }`}
-            >
-              <AlertCircle
-                className={`h-3 w-3 ${
-                  transactionStatus.transactionStatus === "confirmed"
-                    ? "text-emerald-400"
-                    : transactionStatus.transactionStatus === "failed"
-                      ? "text-red-400"
-                      : "text-amber-400"
-                }`}
-              />
-              <AlertDescription className="text-slate-400 text-xs font-mono ios-text-fix">
-                {transactionStatus.transactionStatus === "pending" && "Transaction pending..."}
-                {transactionStatus.transactionStatus === "confirmed" &&
-                  `${currentTransactionType === "tpt" ? "TPT" : "WDD"} rewards claimed!`}
-                {transactionStatus.transactionStatus === "failed" && "Transaction failed"}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Content */}
           <div className="relative z-10 ios-safe-x pb-20 min-h-screen flex flex-col justify-center">
             <div className="max-w-sm mx-auto space-y-3">

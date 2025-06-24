@@ -14,7 +14,7 @@ const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public"
 // Endereços dos tokens conhecidos na Worldchain
 const KNOWN_TOKENS = {
   TPF: {
-    address: "0x834a73c0a83F3BCe349A116FFB2A4c2d1C651E45",
+    address: "0x834a73c0a83F3BCe349A116FFB2A4c2d1C651E45", // Endereço TPF atualizado
     decimals: 18,
     name: "TPulseFi Token",
     logo: "/logo-tpf.png",

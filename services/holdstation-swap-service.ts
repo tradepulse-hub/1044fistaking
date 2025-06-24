@@ -137,7 +137,7 @@ class HoldstationSwapService {
       const quote: SwapQuote = {
         amountOut: quoteResponse.amountOut || "0",
         amountOutFormatted: tokenOutInfo
-          ? ethers.utils.formatUnits(quoteResponse.amountOut || "0", tokenOutInfo.decimals)
+          ? ethers.formatUnits(quoteResponse.amountOut || "0", tokenOutInfo.decimals)
           : "0",
         priceImpact: quoteResponse.priceImpact || "0",
         route: quoteResponse.route,

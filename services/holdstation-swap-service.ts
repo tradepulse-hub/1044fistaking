@@ -36,7 +36,7 @@ interface SwapParams {
 }
 
 class HoldstationSwapService {
-  private provider: ethers.providers.StaticJsonRpcProvider | null = null
+  private provider: any = null // Using any to avoid ethers v5/v6 conflicts
   private client: Client | null = null
   private tokenProvider: TokenProvider | null = null
   private quoter: Quoter | null = null
@@ -55,8 +55,10 @@ class HoldstationSwapService {
     try {
       console.log("🔄 Initializing Holdstation Swap Service...")
 
-      // Create provider
-      this.provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL, {
+      // Create provider - using dynamic import to avoid conflicts
+      const ethersV5 = await import("@holdstation/worldchain-ethers-v5")
+
+      this.provider = new ethersV5.ethers.providers.StaticJsonRpcProvider(RPC_URL, {
         chainId: 480,
         name: "worldchain",
       })
@@ -134,6 +136,7 @@ class HoldstationSwapService {
       const tokenDetails = await this.tokenProvider!.details(tokenOut)
       const tokenOutInfo = tokenDetails[tokenOut]
 
+      // Use ethers v6 formatUnits for formatting
       const quote: SwapQuote = {
         amountOut: quoteResponse.amountOut || "0",
         amountOutFormatted: tokenOutInfo
@@ -184,7 +187,7 @@ class HoldstationSwapService {
         throw new Error("World App not detected. Please open in World App.")
       }
 
-      // Prepare swap parameters
+      // Prepare swap parameters - using ZeroAddress from ethers v6
       const swapParams = {
         tokenIn,
         tokenOut,
@@ -196,7 +199,7 @@ class HoldstationSwapService {
         },
         feeAmountOut: quote.feeAmountOut,
         fee,
-        feeReceiver: ethers.constants.AddressZero,
+        feeReceiver: ethers.ZeroAddress, // ethers v6 syntax
       }
 
       console.log("📋 Swap parameters:", swapParams)

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpDown, RefreshCw, AlertCircle, Bug, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowUpDown, RefreshCw, AlertCircle, Bug, ChevronDown, ChevronUp, Copy, Zap } from "lucide-react"
 import { holdstationSwapService, type SwapQuote } from "@/services/holdstation-swap-service"
 import { holdstationBalanceService } from "@/services/holdstation-balance-service"
 import { useToast } from "@/hooks/use-toast"
@@ -22,12 +22,14 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
   const [quote, setQuote] = useState<SwapQuote | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSwapping, setIsSwapping] = useState(false)
-  const [slippage, setSlippage] = useState("0.5")
   const [tpfBalance, setTpfBalance] = useState("0")
   const [wddBalance, setWddBalance] = useState("0")
   const [showDebug, setShowDebug] = useState(false)
   const [debugLogs, setDebugLogs] = useState<string[]>([])
   const { toast } = useToast()
+
+  // SLIPPAGE FIXO DE 3%
+  const FIXED_SLIPPAGE = "3.0"
 
   // Debug logger
   const addDebugLog = (message: string) => {
@@ -50,7 +52,7 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
       setToAmount("")
       setQuote(null)
     }
-  }, [fromAmount, fromToken, toToken, slippage])
+  }, [fromAmount, fromToken, toToken])
 
   const loadBalances = async () => {
     try {
@@ -80,11 +82,12 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
 
     try {
       setIsLoading(true)
-      addDebugLog(`💱 Getting quote: ${fromAmount} ${fromToken} → ${toToken}`)
+      addDebugLog(`💱 Getting REAL quote from quoter helper: ${fromAmount} ${fromToken} → ${toToken}`)
+      addDebugLog(`📋 Fixed slippage: ${FIXED_SLIPPAGE}%`)
 
       // Test swap service first
       const swapTest = await holdstationSwapService.testSwapService()
-      addDebugLog(`🧪 Swap service test: ${swapTest ? "✅ PASS" : "❌ FAIL"}`)
+      addDebugLog(`🧪 Real quoter service test: ${swapTest ? "✅ PASS" : "❌ FAIL"}`)
 
       const tokenAddresses = holdstationSwapService.getTokenAddresses()
       const fromTokenAddress = fromToken === "TPF" ? tokenAddresses.TPF : tokenAddresses.WDD
@@ -92,29 +95,30 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
 
       addDebugLog(`📋 From token: ${fromTokenAddress}`)
       addDebugLog(`📋 To token: ${toTokenAddress}`)
-      addDebugLog(`📋 Slippage: ${slippage}%`)
+      addDebugLog(`📋 Quoter helper: ${holdstationSwapService.getQuoterAddress()}`)
 
       const quoteResult = await holdstationSwapService.getSwapQuote(
         fromTokenAddress,
         toTokenAddress,
         fromAmount,
-        slippage,
+        FIXED_SLIPPAGE,
       )
 
-      if (quoteResult) {
+      if (quoteResult && quoteResult.realQuote) {
         setQuote(quoteResult)
         setToAmount(quoteResult.amountOutFormatted)
-        addDebugLog(`✅ Quote received: ${quoteResult.amountOutFormatted} ${toToken}`)
+        addDebugLog(`✅ REAL quote received: ${quoteResult.amountOutFormatted} ${toToken}`)
         addDebugLog(`📊 Price impact: ${quoteResult.priceImpact}%`)
+        addDebugLog(`🎯 Quote source: Real market data from quoter helper`)
       } else {
         setToAmount("0")
         setQuote(null)
-        addDebugLog(`❌ No quote received`)
+        addDebugLog(`❌ No real quote received from quoter helper`)
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      addDebugLog(`❌ Quote error: ${errorMsg}`)
-      console.error("Error getting quote:", error)
+      addDebugLog(`❌ Real quote error: ${errorMsg}`)
+      console.error("Error getting real quote:", error)
       setToAmount("0")
       setQuote(null)
     } finally {
@@ -127,21 +131,22 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
 
     try {
       setIsSwapping(true)
-      addDebugLog(`🚀 Executing swap: ${fromAmount} ${fromToken} → ${toAmount} ${toToken}`)
+      addDebugLog(`🚀 Executing swap with REAL market data: ${fromAmount} ${fromToken} → ${toAmount} ${toToken}`)
+      addDebugLog(`📋 Using real quote: ${quote.realQuote ? "✅ YES" : "❌ NO"}`)
 
       let result
       if (fromToken === "TPF") {
-        addDebugLog(`📤 Calling swapTPFToWDD...`)
-        result = await holdstationSwapService.swapTPFToWDD(fromAmount, slippage)
+        addDebugLog(`📤 Calling swapTPFToWDD with real quoter...`)
+        result = await holdstationSwapService.swapTPFToWDD(fromAmount, FIXED_SLIPPAGE)
       } else {
-        addDebugLog(`📤 Calling swapWDDToTPF...`)
-        result = await holdstationSwapService.swapWDDToTPF(fromAmount, slippage)
+        addDebugLog(`📤 Calling swapWDDToTPF with real quoter...`)
+        result = await holdstationSwapService.swapWDDToTPF(fromAmount, FIXED_SLIPPAGE)
       }
 
-      addDebugLog(`📋 Swap result: ${JSON.stringify(result)}`)
+      addDebugLog(`📋 Real swap result: ${JSON.stringify(result)}`)
 
       if (result.success) {
-        addDebugLog(`✅ Swap successful! TX: ${result.transactionHash}`)
+        addDebugLog(`✅ Real swap successful! TX: ${result.transactionHash}`)
         toast({
           title: "Swap Successful!",
           description: `Swapped ${fromAmount} ${fromToken} → ${toAmount} ${toToken}`,
@@ -155,7 +160,7 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
         // Reload balances
         await loadBalances()
       } else {
-        addDebugLog(`❌ Swap failed: ${result.error}`)
+        addDebugLog(`❌ Real swap failed: ${result.error}`)
         toast({
           title: "Swap Failed",
           description: result.error || "Unknown error occurred",
@@ -164,7 +169,7 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      addDebugLog(`❌ Swap exception: ${errorMsg}`)
+      addDebugLog(`❌ Real swap exception: ${errorMsg}`)
       toast({
         title: "Swap Error",
         description: errorMsg,
@@ -181,6 +186,25 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
     setToToken(fromToken)
     setFromAmount(toAmount)
     setToAmount(fromAmount)
+  }
+
+  const copyDebugLogs = async () => {
+    try {
+      const logsText = debugLogs.join("\n")
+      await navigator.clipboard.writeText(logsText)
+      toast({
+        title: "Debug Logs Copied",
+        description: "Debug console content copied to clipboard",
+      })
+      addDebugLog("📋 Debug logs copied to clipboard")
+    } catch (error) {
+      addDebugLog("❌ Failed to copy debug logs")
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy debug logs to clipboard",
+        variant: "destructive",
+      })
+    }
   }
 
   const getTokenLogo = (token: "TPF" | "WDD") => {
@@ -228,7 +252,18 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
       {showDebug && (
         <div className="bg-slate-900/80 border border-slate-700/50 rounded-lg p-2 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Debug Console</span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyDebugLogs}
+                className="h-5 px-2 text-xs text-slate-500 hover:text-slate-300"
+                title="Copy debug logs"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              <span className="text-xs font-medium text-slate-400">Debug Console (Real Quoter)</span>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -321,37 +356,32 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
       </div>
 
       {/* Quote Info - COMPACT */}
-      {quote && (
+      {quote && quote.realQuote && (
         <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded border border-slate-700/20">
-          <span className="text-xs text-slate-400">Impact</span>
+          <div className="flex items-center gap-1">
+            <Zap className="h-3 w-3 text-green-400" />
+            <span className="text-xs text-slate-400">Real Market</span>
+          </div>
           <Badge variant="secondary" className="text-xs h-5">
-            {Number(quote.priceImpact).toFixed(2)}%
+            {Number(quote.priceImpact).toFixed(2)}% impact
           </Badge>
         </div>
       )}
 
-      {/* Slippage - COMPACT */}
+      {/* Slippage - FIXO 3% */}
       <div className="space-y-1">
-        <span className="text-xs text-slate-400">Slippage</span>
+        <span className="text-xs text-slate-400">Slippage (Fixed)</span>
         <div className="flex gap-1">
-          {["0.1", "0.5", "1.0"].map((value) => (
-            <Button
-              key={value}
-              variant={slippage === value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSlippage(value)}
-              className="text-xs h-6 px-2 flex-1"
-            >
-              {value}%
-            </Button>
-          ))}
+          <Button variant="default" size="sm" disabled className="text-xs h-6 px-2 flex-1 bg-slate-600">
+            3.0% (Fixed)
+          </Button>
         </div>
       </div>
 
       {/* Swap Button - COMPACT */}
       <Button
         onClick={executeSwap}
-        disabled={!quote || isSwapping || !fromAmount || Number(fromAmount) <= 0}
+        disabled={!quote || !quote.realQuote || isSwapping || !fromAmount || Number(fromAmount) <= 0}
         className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-sm"
       >
         {isSwapping ? (
@@ -361,6 +391,8 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
           </div>
         ) : !quote ? (
           "Enter Amount"
+        ) : !quote.realQuote ? (
+          "Getting Real Quote..."
         ) : (
           `Swap ${fromToken} → ${toToken}`
         )}
@@ -370,7 +402,7 @@ export function SwapInterface({ userAddress }: SwapInterfaceProps) {
       <div className="flex items-start gap-2 p-2 bg-amber-900/20 rounded border border-amber-600/30">
         <AlertCircle className="h-3 w-3 text-amber-400 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-amber-200 leading-tight">
-          Swapping affects staking rewards. Understand the impact before proceeding.
+          Using real market quotes from quoter helper. Swapping affects staking rewards.
         </p>
       </div>
     </div>

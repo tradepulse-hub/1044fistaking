@@ -9,7 +9,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider"
 import { useEffect } from "react"
 import { WagmiProvider } from "wagmi"
-import { DYNAMIC_ENVIRONMENT_ID } from "./utils"
 import { config } from "./wagmi"
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -26,7 +25,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <DynamicContextProvider
       theme="auto"
       settings={{
-        environmentId: DYNAMIC_ENVIRONMENT_ID,
+        environmentId: process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID ?? "demo-environment",
         walletConnectors: [EthereumWalletConnectors],
       }}
     >

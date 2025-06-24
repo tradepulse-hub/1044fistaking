@@ -1,0 +1,32 @@
+// Example file: emitter.ts
+
+import EventEmitter2 from "eventemitter2"; // Update 1 & 2: Changed import
+
+class MyClass {
+  private emitter: EventEmitter2;
+
+  constructor() {
+    this.emitter = new EventEmitter2(); // Update 3: Instance remains the same
+  }
+
+  on(event: string, listener: (...args: any[]) => void) {
+    this.emitter.on(event, listener);
+  }
+
+  emit(event: string, ...args: any[]) {
+    this.emitter.emit(event, ...args);
+  }
+}
+
+export default MyClass;
+
+// Example file: types.ts
+
+import type EventEmitter2 from "eventemitter2"; // Update 2: Type import
+
+interface EmitterInterface {
+    on(event: string, listener: (...args: any[]) => void): void;
+    emit(event: string, ...args: any[]): void;
+}
+
+export type { EmitterInterface, EventEmitter2 };

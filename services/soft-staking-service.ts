@@ -182,15 +182,15 @@ class SoftStakingService {
       const contractAPY = await this.getContractAPY()
 
       // Calcular recompensas por segundo usando APY real
-      const tpfBalance = Number(ethers.utils.formatEther(userInfo[0]))
+      const tpfBalance = Number(ethers.formatEther(userInfo[0]))
       const apy = Number(contractAPY) / 100
       const rewardsPerSecond = (tpfBalance * apy) / (365 * 24 * 60 * 60)
 
       const result = {
-        tpfBalance: ethers.utils.formatEther(userInfo[0]),
-        pendingRewards: ethers.utils.formatEther(userInfo[1]),
+        tpfBalance: ethers.formatEther(userInfo[0]),
+        pendingRewards: ethers.formatEther(userInfo[1]),
         lastClaimTime: Number(userInfo[2]),
-        totalClaimed: ethers.utils.formatEther(userInfo[3]),
+        totalClaimed: ethers.formatEther(userInfo[3]),
         rewardsPerSecond: rewardsPerSecond.toFixed(18),
         contractAPY,
       }
@@ -262,7 +262,7 @@ class SoftStakingService {
       console.log(`APY: ${Number(apy) / 100}%`)
       console.log(`TPF Token: ${tokenAddresses[0]}`)
       console.log(`Reward Token: ${tokenAddresses[1]}`)
-      console.log(`Reward Balance: ${ethers.utils.formatEther(rewardBalance)}`)
+      console.log(`Reward Balance: ${ethers.formatEther(rewardBalance)}`)
 
       return apy > 0 && tokenAddresses[0] === TPF_TOKEN
     } catch (error) {

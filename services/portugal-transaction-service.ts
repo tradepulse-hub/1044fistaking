@@ -1,11 +1,12 @@
 import { MiniKit } from "@worldcoin/minikit-js"
+import { debugLogger } from "@/components/debug-console"
 import { errorLogger } from "@/components/error-console"
 
-// Contract address - NOVO CONTRATO SOFT STAKING
-const SOFT_STAKING_CONTRACT = "0x4c1f9CF3c5742c73a00864a32048988b87121e2f"
+// Contract address - PORTUGAFI ATUALIZADO
+const PORTUGAFI_STAKING_CONTRACT = "0xACc9d1bC40546a4EE05f1B54C7847772F4d8990f"
 
-// ABI para transações - FUNÇÃO CLAIM
-const SOFT_STAKING_ABI = [
+// ABI IDÊNTICO AO TPT QUE FUNCIONA
+const PORTUGAFI_STAKING_ABI = [
   {
     inputs: [],
     name: "claimRewards",
@@ -22,19 +23,21 @@ interface TransactionResult {
   debugUrl?: string
 }
 
-class SoftTransactionService {
-  private static instance: SoftTransactionService
+class PortugaFiTransactionService {
+  private static instance: PortugaFiTransactionService
 
-  static getInstance(): SoftTransactionService {
-    if (!SoftTransactionService.instance) {
-      SoftTransactionService.instance = new SoftTransactionService()
+  static getInstance(): PortugaFiTransactionService {
+    if (!PortugaFiTransactionService.instance) {
+      PortugaFiTransactionService.instance = new PortugaFiTransactionService()
     }
-    return SoftTransactionService.instance
+    return PortugaFiTransactionService.instance
   }
 
-  // CLAIM TPT REWARDS
+  // CLAIM PORTUGAFI REWARDS - COPIANDO LÓGICA EXATA DO TPT
   async executeClaimRewards(): Promise<TransactionResult> {
     try {
+      debugLogger.info("🇵🇹 Starting PortugaFi claim (copying TPT logic)...")
+
       if (!MiniKit.isInstalled()) {
         throw new Error("World App not detected. Please open in World App.")
       }
@@ -42,81 +45,91 @@ class SoftTransactionService {
       const transactionPayload = {
         transaction: [
           {
-            address: SOFT_STAKING_CONTRACT,
-            abi: SOFT_STAKING_ABI,
+            address: PORTUGAFI_STAKING_CONTRACT,
+            abi: PORTUGAFI_STAKING_ABI,
             functionName: "claimRewards",
             args: [],
           },
         ],
       }
 
-      console.log("🚀 TPT SOFT STAKING CLAIM:", {
-        contract: SOFT_STAKING_CONTRACT,
+      debugLogger.info("🚀 PortugaFi transaction payload", {
+        contract: PORTUGAFI_STAKING_CONTRACT,
         function: "claimRewards",
+        method: "Identical to TPT",
       })
 
       const result = await MiniKit.commandsAsync.sendTransaction(transactionPayload)
+      debugLogger.info("📋 PortugaFi MiniKit result", result)
 
       if (result.finalPayload?.status === "error") {
-        const errorMsg = this.formatError("TPT_CLAIM", result.finalPayload)
+        const errorMsg = this.formatError("PORTUGAFI_CLAIM", result.finalPayload)
         const debugUrl = result.finalPayload?.details?.debugUrl
 
-        errorLogger.logError("TPT Claim Failed", errorMsg, {
-          ...result,
+        debugLogger.error("❌ PortugaFi claim failed", {
+          error: result.finalPayload,
           debugUrl,
-          contractAddress: SOFT_STAKING_CONTRACT,
         })
 
-        return {
-          success: false,
-          error: errorMsg,
+        errorLogger.logError("PortugaFi Claim Failed (TPT Logic Copy)", errorMsg, {
+          ...result,
           debugUrl,
-        }
+          contractAddress: PORTUGAFI_STAKING_CONTRACT,
+        })
+
+        return { success: false, error: errorMsg, debugUrl }
       }
 
       if (result.finalPayload?.status === "success") {
-        console.log("✅ TPT CLAIM SUCCESS:", result.finalPayload.transaction_id)
+        debugLogger.success("✅ PortugaFi claim SUCCESS (TPT logic worked!)", {
+          transactionId: result.finalPayload.transaction_id,
+        })
         return { success: true, transactionId: result.finalPayload.transaction_id }
       }
 
       return { success: false, error: "Unexpected response from MiniKit" }
     } catch (error) {
-      const errorMsg = `TPT claim failed: ${error instanceof Error ? error.message : String(error)}`
-      console.error("❌ TPT claim exception:", error)
-      errorLogger.logError("TPT Claim Exception", errorMsg, {
+      const errorMsg = `PortugaFi claim failed: ${error instanceof Error ? error.message : String(error)}`
+      debugLogger.error("❌ PortugaFi claim exception", error)
+      errorLogger.logError("PortugaFi Claim Exception (TPT Logic Copy)", errorMsg, {
         error,
-        contractAddress: SOFT_STAKING_CONTRACT,
+        contractAddress: PORTUGAFI_STAKING_CONTRACT,
       })
       return { success: false, error: errorMsg }
     }
   }
 
-  // Formatação de erro
+  // FORMATAÇÃO DE ERRO IDÊNTICA AO TPT
   private formatError(operation: string, payload: any): string {
     const errorCode = payload.error_code || "unknown_error"
     const description = payload.description || "Transaction failed"
     const details = payload.details || {}
 
-    console.log(`❌ ${operation} ERROR:`, { errorCode, description, payload })
+    debugLogger.error(`❌ ${operation} ERROR ANALYSIS`, {
+      errorCode,
+      description,
+      payload,
+    })
 
     if (errorCode === "simulation_failed") {
       const debugUrl = details.debugUrl || ""
-      return `❌ TPT CLAIM SIMULATION FAILED
+      return `❌ PORTUGAFI CLAIM SIMULATION FAILED
 
 🔴 The claim transaction failed during simulation.
+📋 Contract: ${PORTUGAFI_STAKING_CONTRACT}
 📋 Block: ${details.block || "Unknown"}
-📋 Contract: ${SOFT_STAKING_CONTRACT}
 
 💡 POSSIBLE CAUSES:
 • No TPF tokens in your wallet
-• No rewards to claim yet
-• Contract has insufficient reward tokens
+• No PortugaFi rewards to claim yet
+• Contract has insufficient reward tokens deposited
+• Minimum time between claims not reached
 • Network congestion
 
 🚀 SOLUTIONS:
 1. Make sure you have TPF tokens in your wallet
-2. Wait for rewards to accumulate
-3. Check if contract has reward tokens deposited
+2. Wait for rewards to accumulate (check APY: 12%)
+3. Contact owner to deposit reward tokens to contract
 4. Try again later
 
 ${debugUrl ? `\n🔗 Tenderly Debug: ${debugUrl}` : ""}`
@@ -125,12 +138,12 @@ ${debugUrl ? `\n🔗 Tenderly Debug: ${debugUrl}` : ""}`
     if (errorCode === "disallowed_operation") {
       return `❌ OPERATION NOT ALLOWED
 
-🔴 Claim function not configured in World Portal
-📋 Contract: ${details.contractAddress || SOFT_STAKING_CONTRACT}
+🔴 PortugaFi claim function not configured in World Portal
+📋 Contract: ${details.contractAddress || PORTUGAFI_STAKING_CONTRACT}
 
 💡 SOLUTION: Add contract to World Developer Portal:
 🌐 Configuration → Advanced → Contract Entrypoints
-📝 Add: ${SOFT_STAKING_CONTRACT}`
+📝 Add: ${PORTUGAFI_STAKING_CONTRACT}`
     }
 
     if (errorCode === "user_rejected") {
@@ -140,7 +153,6 @@ ${debugUrl ? `\n🔗 Tenderly Debug: ${debugUrl}` : ""}`
     return `❌ ${operation} failed: ${description}`
   }
 
-  // Check transaction status
   async checkTransactionStatus(transactionId: string): Promise<any> {
     try {
       const response = await fetch(`/api/transaction-status?id=${transactionId}`)
@@ -152,11 +164,10 @@ ${debugUrl ? `\n🔗 Tenderly Debug: ${debugUrl}` : ""}`
     }
   }
 
-  // Obter endereço do contrato
   getContractAddress(): string {
-    return SOFT_STAKING_CONTRACT
+    return PORTUGAFI_STAKING_CONTRACT
   }
 }
 
-export const softTransactionService = SoftTransactionService.getInstance()
+export const portugaFiTransactionService = PortugaFiTransactionService.getInstance()
 export type { TransactionResult }

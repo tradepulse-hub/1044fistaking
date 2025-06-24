@@ -1,5 +1,6 @@
 import { MiniKit } from "@worldcoin/minikit-js"
-// import { errorLogger } from "@/components/error-console"
+import { debugLogger } from "@/components/debug-console"
+import { errorLogger } from "@/components/error-console"
 
 // Contract address - DRACHMA (COPIANDO LÓGICA DO TPT)
 const DRACHMA_STAKING_CONTRACT = "0xc4F3ae925E647aa2623200901a43BF65e8542c23"
@@ -32,15 +33,10 @@ class DrachmaTransactionService {
     return DrachmaTransactionService.instance
   }
 
-  // Fallback logger (replaces deleted error-console)
-  private logError(context: string, message: string, meta?: Record<string, unknown>) {
-    console.error(`[${context}] ${message}`, meta)
-  }
-
   // CLAIM DRACHMA REWARDS - COPIANDO LÓGICA EXATA DO TPT
   async executeClaimRewards(): Promise<TransactionResult> {
     try {
-      console.info("🪙 Starting Drachma claim (copying TPT logic that works)...")
+      debugLogger.info("🪙 Starting Drachma claim (copying TPT logic that works)...")
 
       if (!MiniKit.isInstalled()) {
         throw new Error("World App not detected. Please open in World App.")
@@ -57,7 +53,7 @@ class DrachmaTransactionService {
         ],
       }
 
-      console.info("🚀 Drachma transaction payload (TPT method)", {
+      debugLogger.info("🚀 Drachma transaction payload (TPT method)", {
         contract: DRACHMA_STAKING_CONTRACT,
         function: "claimRewards",
         method: "Identical to working TPT",
@@ -65,20 +61,20 @@ class DrachmaTransactionService {
       })
 
       const result = await MiniKit.commandsAsync.sendTransaction(transactionPayload)
-      console.info("📋 Drachma MiniKit result", result)
+      debugLogger.info("📋 Drachma MiniKit result", result)
 
       if (result.finalPayload?.status === "error") {
         const errorMsg = this.formatError("DRACHMA_CLAIM", result.finalPayload)
         const debugUrl = result.finalPayload?.details?.debugUrl
 
-        console.error("❌ Drachma claim failed (even with TPT logic)", {
+        debugLogger.error("❌ Drachma claim failed (even with TPT logic)", {
           error: result.finalPayload,
           debugUrl,
           errorCode: result.finalPayload.error_code,
           investigation: "0x372500ab still occurring",
         })
 
-        this.logError("Drachma Claim Failed (TPT Logic Copy)", errorMsg, {
+        errorLogger.logError("Drachma Claim Failed (TPT Logic Copy)", errorMsg, {
           ...result,
           debugUrl,
           contractAddress: DRACHMA_STAKING_CONTRACT,
@@ -90,7 +86,7 @@ class DrachmaTransactionService {
       }
 
       if (result.finalPayload?.status === "success") {
-        console.log("✅ Drachma claim SUCCESS (TPT logic worked!)", {
+        debugLogger.success("✅ Drachma claim SUCCESS (TPT logic worked!)", {
           transactionId: result.finalPayload.transaction_id,
           errorFixed: "0x372500ab resolved",
         })
@@ -100,8 +96,8 @@ class DrachmaTransactionService {
       return { success: false, error: "Unexpected response from MiniKit" }
     } catch (error) {
       const errorMsg = `Drachma claim failed: ${error instanceof Error ? error.message : String(error)}`
-      console.error("❌ Drachma claim exception (TPT logic copy)", error)
-      this.logError("Drachma Claim Exception (TPT Logic Copy)", errorMsg, {
+      debugLogger.error("❌ Drachma claim exception (TPT logic copy)", error)
+      errorLogger.logError("Drachma Claim Exception (TPT Logic Copy)", errorMsg, {
         error,
         contractAddress: DRACHMA_STAKING_CONTRACT,
         specificError: "0x372500ab",
@@ -117,7 +113,7 @@ class DrachmaTransactionService {
     const description = payload.description || "Transaction failed"
     const details = payload.details || {}
 
-    console.error(`❌ ${operation} ERROR ANALYSIS (TPT logic used)`, {
+    debugLogger.error(`❌ ${operation} ERROR ANALYSIS (TPT logic used)`, {
       errorCode,
       description,
       payload,

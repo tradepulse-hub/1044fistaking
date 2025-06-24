@@ -1,55 +1,44 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Wallet,
   AlertCircle,
   FolderOpen,
   Info,
   Home,
+  RefreshCw,
   Wifi,
   Shield,
   Mail,
   ExternalLink,
   Lightbulb,
   Zap,
-  ArrowLeftRight,
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
 import { MiniKit } from "@worldcoin/minikit-js"
-import { balanceSyncService } from "@/services/balance-sync-service"
-import { softStakingService } from "@/services/soft-staking-service"
-import { softTransactionService } from "@/services/soft-transaction-service"
+import { portugaFiStakingService } from "@/services/portugal-staking-service"
 import { drachmaStakingService } from "@/services/drachma-staking-service"
 import { drachmaTransactionService } from "@/services/drachma-transaction-service"
-import { useTransactionMonitor } from "@/hooks/use-transaction-monitor"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useRef } from "react"
-import { SwapInterface } from "@/components/swap-interface"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-
-// Temporary lightweight logger after removing debug tools
-const errorLogger = {
-  /* eslint-disable no-console */
-  logError: (...args: any[]) => console.error("[TPulseFi]", ...args),
-}
+import { portugaFiTransactionService } from "@/services/portugal-transaction-service"
 
 export default function TPTStakingApp() {
-  const [account, setAccount] = useState<string>("")
   const [isConnected, setIsConnected] = useState(false)
-  const { toast } = useToast()
+  const [account, setAccount] = useState("")
   const [walletAddress, setWalletAddress] = useState("")
   const [tpfBalance, setTpfBalance] = useState("0")
 
-  // TPT (TradePulse Token) State
-  const [tptPendingRewards, setTptPendingRewards] = useState("0")
-  const [tptRewardsPerSecond, setTptRewardsPerSecond] = useState("0")
+  // PortugaFi Token State
+  const [portugaFiPendingRewards, setPortugaFiPendingRewards] = useState("0")
+  const [portugaFiRewardsPerSecond, setPortugaFiRewardsPerSecond] = useState("0")
 
-  // Drachma Token State - NO COUNTER
-  const [drachmaPendingRewards, setDrachmaPendingRewards] = useState("Surprise!")
+  // Drachma Token State
+  const [drachmaPendingRewards, setDrachmaPendingRewards] = useState("0")
+  const [drachmaRewardsPerSecond, setDrachmaRewardsPerSecond] = useState("0")
 
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -57,14 +46,13 @@ export default function TPTStakingApp() {
   const [activeTab, setActiveTab] = useState("home")
 
   const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null)
-  const [currentTransactionType, setCurrentTransactionType] = useState<"tpt" | "drachma" | null>(null)
+  const [currentTransactionType, setCurrentTransactionType] = useState<"portugafi" | "drachma" | null>(null)
+  const [transactionStatus, setTransactionStatus] = useState<any>(null)
 
-  const tptRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const portugaFiRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const drachmaRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const transactionStatus = useTransactionMonitor(currentTransactionId)
-
-  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
-
+  // Check for existing session on mount
   useEffect(() => {
     checkSession()
   }, [])
@@ -86,9 +74,7 @@ export default function TPTStakingApp() {
         }
       }
     } catch (error) {
-      errorLogger.logError("Session Check Failed", `Failed to check existing session: ${error}`, {
-        error: error instanceof Error ? error.message : String(error),
-      })
+      console.error("Session check failed:", error)
     }
   }
 
@@ -153,85 +139,65 @@ export default function TPTStakingApp() {
         console.log("Login failed")
       }
     } catch (error) {
-      const errorMsg = "Failed to connect World Wallet"
-      errorLogger.logError("Wallet Connection Failed", errorMsg, {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      })
+      console.error("Connection failed:", error)
       console.log("Connection failed, please try again")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Carregar dados de todos os tokens
   const loadUserData = async (userAddress: string) => {
     try {
       setIsRefreshing(true)
 
-      console.log("🔄 Loading user data for TPT and Drachma...")
+      console.log("🔄 Loading user data for tokens...")
 
-      // Load TPT data
-      const tptUserInfo = await softStakingService.getUserInfo(userAddress)
-      console.log("📋 TPT User Info:", tptUserInfo)
+      // Load PortugaFi Token data
+      const portugaFiUserInfo = await portugaFiStakingService.getUserInfo(userAddress)
+      console.log("📋 PortugaFi User Info:", portugaFiUserInfo)
 
-      // Load Drachma Token data (but don't use counter)
+      // Load Drachma Token data
       console.log("🪙 Loading Drachma data...")
       const drachmaUserInfo = await drachmaStakingService.getUserInfo(userAddress)
       console.log("📋 Drachma User Info:", drachmaUserInfo)
 
-      // Verificar se as APYs estão corretas
-      console.log("📊 APY Comparison:")
-      console.log(`   - TPT APY: ${tptUserInfo.contractAPY}%`)
-      console.log(`   - Drachma APY: ${drachmaUserInfo.contractAPY}%`)
+      // Set shared TPF balance
+      setTpfBalance(portugaFiUserInfo.tpfBalance)
 
-      // Set shared TPF balance (same for all)
-      setTpfBalance(tptUserInfo.tpfBalance)
+      // Set PortugaFi Token specific data
+      setPortugaFiPendingRewards(portugaFiUserInfo.pendingRewards)
+      setPortugaFiRewardsPerSecond(portugaFiUserInfo.rewardsPerSecond)
 
-      // Set TPT specific data
-      setTptPendingRewards(tptUserInfo.pendingRewards)
-      setTptRewardsPerSecond(tptUserInfo.rewardsPerSecond)
-
-      // Set Drachma Token specific data - ALWAYS "Surprise!"
-      setDrachmaPendingRewards("Surprise!")
-
-      console.log("📊 Final rewards per second:")
-      console.log(`   - TPT: ${tptUserInfo.rewardsPerSecond}`)
-      console.log(`   - Drachma: Surprise! (no counter)`)
-
-      // Update balance sync service
-      const tpfBalanceNum = Number(tptUserInfo.tpfBalance || "0")
-      balanceSyncService.updateTPFBalance(userAddress, tpfBalanceNum)
+      // Set Drachma Token specific data
+      setDrachmaPendingRewards(drachmaUserInfo.pendingRewards)
+      setDrachmaRewardsPerSecond(drachmaUserInfo.rewardsPerSecond)
 
       setNetworkError(false)
     } catch (error) {
       setNetworkError(true)
       loadDemoData()
-      errorLogger.logError("Multi-Token Data Loading Failed", `Failed to load user data: ${error}`, {
-        userAddress,
-        error: error instanceof Error ? error.message : String(error),
-      })
+      console.error("Failed to load user data:", error)
     } finally {
       setIsRefreshing(false)
     }
   }
 
-  // Atualizar loadDemoData
   const loadDemoData = () => {
     const demoBalance = 76476285.0
 
-    // TPT: 1% APY
-    const tptApy = 0.01
-    const tptRewardsPerSec = (demoBalance * tptApy) / (365 * 24 * 60 * 60)
+    // PortugaFi: 1% APY
+    const portugaFiApy = 0.01
+    const portugaFiRewardsPerSec = (demoBalance * portugaFiApy) / (365 * 24 * 60 * 60)
 
-    console.log("📋 Demo data APYs:")
-    console.log(`   - TPT: ${tptApy * 100}% (${tptRewardsPerSec.toFixed(8)}/s)`)
-    console.log(`   - Drachma: Surprise! (no counter)`)
+    // Drachma: APY FIXA de 0.01%
+    const drachmaApy = 0.0001 // 0.01% APY FIXA
+    const drachmaRewardsPerSec = (demoBalance * drachmaApy) / (365 * 24 * 60 * 60)
 
     setTpfBalance(demoBalance.toString())
-    setTptPendingRewards("0.5")
-    setTptRewardsPerSecond(tptRewardsPerSec.toFixed(18))
-    setDrachmaPendingRewards("Surprise!")
+    setPortugaFiPendingRewards("0.5")
+    setPortugaFiRewardsPerSecond(portugaFiRewardsPerSec.toFixed(18))
+    setDrachmaPendingRewards("0.01")
+    setDrachmaRewardsPerSecond(drachmaRewardsPerSec.toFixed(18))
   }
 
   const disconnectWallet = async () => {
@@ -241,58 +207,73 @@ export default function TPTStakingApp() {
       setAccount("")
       setWalletAddress("")
       setTpfBalance("0")
-      setTptPendingRewards("0")
-      setTptRewardsPerSecond("0")
-      setDrachmaPendingRewards("Surprise!")
+      setPortugaFiPendingRewards("0")
+      setPortugaFiRewardsPerSecond("0")
+      setDrachmaPendingRewards("0")
+      setDrachmaRewardsPerSecond("0")
       setActiveTab("home")
     } catch (error) {
-      errorLogger.logError("Disconnect Failed", `Failed to disconnect wallet: ${error}`, {
-        error: error instanceof Error ? error.message : String(error),
-      })
+      console.error("Disconnect failed:", error)
     }
   }
 
-  // Real-time rewards calculation ONLY for TPT
+  // Real-time rewards calculation for PortugaFi Token
   useEffect(() => {
-    if (isConnected && Number(tptRewardsPerSecond) > 0) {
-      tptRewardsIntervalRef.current = setInterval(() => {
-        setTptPendingRewards((prev) => {
+    if (isConnected && Number(portugaFiRewardsPerSecond) > 0) {
+      portugaFiRewardsIntervalRef.current = setInterval(() => {
+        setPortugaFiPendingRewards((prev) => {
           const current = Number(prev)
-          const perSecond = Number(tptRewardsPerSecond)
-          const newRewards = current + perSecond * 0.1
+          const perSecond = Number(portugaFiRewardsPerSecond)
+          const newRewards = current + perSecond * 0.1 // 100ms interval
           return newRewards.toFixed(8)
         })
-      }, 100)
+      }, 100) // Update every 100ms
 
       return () => {
-        if (tptRewardsIntervalRef.current) {
-          clearInterval(tptRewardsIntervalRef.current)
+        if (portugaFiRewardsIntervalRef.current) {
+          clearInterval(portugaFiRewardsIntervalRef.current)
         }
       }
     }
-  }, [isConnected, tptRewardsPerSecond])
+  }, [isConnected, portugaFiRewardsPerSecond])
 
-  const handleClaimTPTRewards = async () => {
+  // Real-time rewards calculation for Drachma Token
+  useEffect(() => {
+    if (isConnected && Number(drachmaRewardsPerSecond) > 0) {
+      drachmaRewardsIntervalRef.current = setInterval(() => {
+        setDrachmaPendingRewards((prev) => {
+          const current = Number(prev)
+          const perSecond = Number(drachmaRewardsPerSecond)
+          const newRewards = current + perSecond * 0.1 // 100ms interval
+          return newRewards.toFixed(8)
+        })
+      }, 100) // Update every 100ms
+
+      return () => {
+        if (drachmaRewardsIntervalRef.current) {
+          clearInterval(drachmaRewardsIntervalRef.current)
+        }
+      }
+    }
+  }, [isConnected, drachmaRewardsPerSecond])
+
+  const handleClaimPortugaFiRewards = async () => {
     try {
       setIsLoading(true)
 
-      const result = await softTransactionService.executeClaimRewards()
+      const result = await portugaFiTransactionService.executeClaimRewards()
 
       if (result.success && result.transactionId) {
         setCurrentTransactionId(result.transactionId)
-        setCurrentTransactionType("tpt")
+        setCurrentTransactionType("portugafi")
+        setTransactionStatus({ transactionStatus: "pending" })
 
         // Reset pending rewards
-        setTptPendingRewards("0.0")
+        setPortugaFiPendingRewards("0.0")
       } else {
-        errorLogger.logError("TPT Claim Failed", result.error || "Claim transaction failed", result)
-        console.log("TPT claim failed, please try again")
+        console.log("PortugaFi claim failed, please try again")
       }
     } catch (error) {
-      const errorMsg = "Failed to execute TPT claim transaction"
-      errorLogger.logError("TPT Claim UI Error", errorMsg, {
-        error: error instanceof Error ? error.message : String(error),
-      })
       console.log("Transaction failed, please try again")
     } finally {
       setIsLoading(false)
@@ -308,18 +289,14 @@ export default function TPTStakingApp() {
       if (result.success && result.transactionId) {
         setCurrentTransactionId(result.transactionId)
         setCurrentTransactionType("drachma")
+        setTransactionStatus({ transactionStatus: "pending" })
 
-        // Keep "Surprise!" after claim
-        setDrachmaPendingRewards("Surprise!")
+        // Reset pending rewards
+        setDrachmaPendingRewards("0.0")
       } else {
-        errorLogger.logError("Drachma Claim Failed", result.error || "Claim transaction failed", result)
         console.log("Drachma claim failed, please try again")
       }
     } catch (error) {
-      const errorMsg = "Failed to execute Drachma claim transaction"
-      errorLogger.logError("Drachma Claim UI Error", errorMsg, {
-        error: error instanceof Error ? error.message : String(error),
-      })
       console.log("Transaction failed, please try again")
     } finally {
       setIsLoading(false)
@@ -453,10 +430,10 @@ export default function TPTStakingApp() {
                 </div>
 
                 <div className="bg-slate-800/40 p-2 rounded border border-slate-700/30">
-                  <h4 className="text-slate-300 font-medium mb-1 text-xs">How it works:</h4>
+                  <h4 className="text-slate-300 font-medium mb-1 text-xs">Available Rewards:</h4>
                   <ul className="space-y-0.5 text-xs">
-                    <li>• Hold TPF tokens in your wallet</li>
-                    <li>• Earn rewards automatically</li>
+                    <li>• PortugaFi Token (PTF) - Active</li>
+                    <li>• Drachma Token (WDD) - Active</li>
                     <li>• No token locking required</li>
                   </ul>
                 </div>
@@ -487,9 +464,9 @@ export default function TPTStakingApp() {
             className="absolute inset-0 opacity-10"
             style={{
               backgroundImage: `
-        linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px)
-      `,
+          linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px)
+        `,
               backgroundSize: "30px 30px",
               animation: "grid-move 20s linear infinite",
             }}
@@ -597,45 +574,10 @@ export default function TPTStakingApp() {
         {/* TPF Balance - COMPACT TOP */}
         <div className="text-center py-2 ios-safe-top">
           <div className="text-xs text-slate-400 mb-1 ios-text-fix">Your TPF Balance</div>
-          <div className="flex items-center justify-center gap-2">
-            <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
-
-            {/* Swap Icon */}
-            <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
-              <DialogTrigger asChild>
-                <button className="p-1 rounded-full bg-slate-700/50 hover:bg-slate-600/50 transition-colors border border-slate-600/30 hover:border-slate-500/50">
-                  <ArrowLeftRight className="h-3 w-3 text-slate-300" />
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md bg-slate-900/95 border-slate-700/50 backdrop-blur-xl">
-                <DialogHeader>
-                  <DialogTitle className="text-slate-300 flex items-center gap-2">
-                    <ArrowLeftRight className="h-4 w-4" />
-                    Token Swap
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="mt-4">
-                  <SwapInterface userAddress={walletAddress} />
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
         </div>
 
-        {/* ENGLISH MESSAGE */}
-        <div className="mx-3 mb-3">
-          <Card className="elegant-card bg-gradient-to-r from-amber-900/20 to-yellow-900/20 border-amber-600/30">
-            <CardContent className="p-2">
-              <div className="text-center">
-                <p className="text-xs text-amber-200 ios-text-fix font-medium">
-                  The more TPF you have in your wallet, the more you earn!
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* TPT REWARDS - COMPACT RECTANGLE - ACTIVE */}
+        {/* PORTUGAFI REWARDS - COMPACT RECTANGLE - ACTIVE */}
         <Card className="elegant-card bg-gradient-to-r from-slate-800/60 to-gray-800/60 border-slate-600/50 mx-3">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
@@ -643,13 +585,19 @@ export default function TPTStakingApp() {
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 flex-shrink-0">
                   <div className="absolute inset-0 bg-slate-400/20 rounded-full blur-sm"></div>
-                  <div className="relative w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center border border-slate-500/50">
-                    <Image src="/logo.png" alt="TPT Logo" width={32} height={32} className="silver-glow" />
+                  <div className="relative w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center border border-slate-500/50 overflow-hidden">
+                    <Image
+                      src="/portugal-token-logo.png"
+                      alt="PTF Logo"
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold silver-text ios-text-fix">TradePulse</h3>
-                  <p className="text-xs text-slate-400 ios-text-fix">TPT</p>
+                  <h3 className="text-sm font-bold silver-text ios-text-fix">PortugaFi</h3>
+                  <p className="text-xs text-slate-400 ios-text-fix">PTF</p>
                 </div>
               </div>
 
@@ -657,21 +605,23 @@ export default function TPTStakingApp() {
               <div className="text-right">
                 <div className="text-xs text-slate-400 ios-text-fix">Pending</div>
                 <div className="text-sm font-bold silver-text font-mono ios-text-fix">
-                  {formatRewards(tptPendingRewards)}
+                  {formatRewards(portugaFiPendingRewards)}
                 </div>
-                <div className="text-xs text-slate-500 ios-text-fix">+{Number(tptRewardsPerSecond).toFixed(6)}/s</div>
+                <div className="text-xs text-slate-500 ios-text-fix">
+                  +{Number(portugaFiRewardsPerSecond).toFixed(6)}/s
+                </div>
               </div>
             </div>
 
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
               <Button
-                onClick={handleClaimTPTRewards}
-                disabled={isLoading || Number(tptPendingRewards) <= 0}
+                onClick={handleClaimPortugaFiRewards}
+                disabled={isLoading || Number(portugaFiPendingRewards) <= 0}
                 className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-white font-semibold text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 ios-button-fix"
               >
                 <div className="flex items-center gap-1">
-                  {isLoading && currentTransactionType === "tpt" ? (
+                  {isLoading && currentTransactionType === "portugafi" ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span className="ios-text-fix">CLAIMING...</span>
@@ -679,7 +629,7 @@ export default function TPTStakingApp() {
                   ) : (
                     <>
                       <Zap className="w-3 h-3" />
-                      <span className="ios-text-fix">CLAIM TPT</span>
+                      <span className="ios-text-fix">CLAIM PTF</span>
                     </>
                   )}
                 </div>
@@ -688,7 +638,7 @@ export default function TPTStakingApp() {
           </CardContent>
         </Card>
 
-        {/* DRACHMA REWARDS - COMPACT RECTANGLE - SURPRISE! */}
+        {/* DRACHMA REWARDS - COMPACT RECTANGLE - ACTIVE */}
         <Card className="elegant-card bg-gradient-to-r from-slate-800/60 to-gray-800/60 border-slate-600/50 mx-3">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
@@ -706,10 +656,15 @@ export default function TPTStakingApp() {
                 </div>
               </div>
 
-              {/* Right side - Surprise! */}
+              {/* Right side - Rewards */}
               <div className="text-right">
                 <div className="text-xs text-slate-400 ios-text-fix">Pending</div>
-                <div className="text-sm font-bold text-purple-400 font-mono ios-text-fix">Surprise!</div>
+                <div className="text-sm font-bold silver-text font-mono ios-text-fix">
+                  {formatRewards(drachmaPendingRewards)}
+                </div>
+                <div className="text-xs text-slate-500 ios-text-fix">
+                  +{Number(drachmaRewardsPerSecond).toFixed(8)}/s
+                </div>
               </div>
             </div>
 
@@ -717,7 +672,7 @@ export default function TPTStakingApp() {
             <div className="mt-2">
               <Button
                 onClick={handleClaimDrachmaRewards}
-                disabled={isLoading}
+                disabled={isLoading || Number(drachmaPendingRewards) <= 0}
                 className="w-full h-8 elegant-button bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-white font-semibold text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01] disabled:opacity-50 ios-button-fix"
               >
                 <div className="flex items-center gap-1">
@@ -737,6 +692,28 @@ export default function TPTStakingApp() {
             </div>
           </CardContent>
         </Card>
+
+        {/* INFO FOOTER - COMPACT */}
+        <div className="mx-3">
+          <Card className="elegant-card bg-slate-900/40 border-slate-700/30">
+            <CardContent className="p-2">
+              <div className="text-center space-y-1">
+                <div className="text-xs text-slate-400 ios-text-fix">Multi-Token Soft Staking</div>
+                <div className="text-xs text-slate-500 ios-text-fix">Based on TPF Holdings • No Lock Required</div>
+                <div className="flex items-center justify-center gap-3 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full"></div>
+                    <span className="text-slate-400 ios-text-fix">PTF Active</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
+                    <span className="text-slate-400 ios-text-fix">WDD Active</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -757,6 +734,18 @@ export default function TPTStakingApp() {
       ) : (
         // Normal interface with menu
         <>
+          {/* Account Info - COMPACT */}
+          <div className="flex items-center justify-center gap-2 text-xs py-1 ios-safe-top relative z-10">
+            <div
+              className={`w-1 h-1 rounded-full animate-pulse ${networkError ? "bg-amber-400" : "bg-emerald-400"}`}
+            ></div>
+            <span className="text-slate-500 font-mono ios-text-fix text-xs">{account}</span>
+            {isRefreshing && <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />}
+            <Badge variant="outline" className="text-xs bg-slate-800/40 text-slate-400 border-slate-600/30 px-1 py-0">
+              Multi
+            </Badge>
+          </div>
+
           {transactionStatus && (
             <Alert
               className={`bg-slate-900/50 border-slate-600/30 py-1 mx-3 relative z-10 ${
@@ -779,7 +768,7 @@ export default function TPTStakingApp() {
               <AlertDescription className="text-slate-400 text-xs font-mono ios-text-fix">
                 {transactionStatus.transactionStatus === "pending" && "Transaction pending..."}
                 {transactionStatus.transactionStatus === "confirmed" &&
-                  `${currentTransactionType === "tpt" ? "TPT" : "WDD"} rewards claimed!`}
+                  `${currentTransactionType === "portugafi" ? "PTF" : "WDD"} rewards claimed!`}
                 {transactionStatus.transactionStatus === "failed" && "Transaction failed"}
               </AlertDescription>
             </Alert>
@@ -832,14 +821,14 @@ export default function TPTStakingApp() {
                 }`}
               >
                 <Info className="h-4 w-4" />
-                <span className="text-xs mt-0.5 ios-text-fix">Info</span>
+                <span className="text-xs mt-0.5 ios-text-fix">About</span>
               </button>
               <button
                 onClick={disconnectWallet}
-                className="flex flex-col items-center p-1 text-slate-500 hover:text-slate-300 transition-colors ios-button-fix"
+                className="flex flex-col items-center p-1 transition-colors text-red-400 hover:text-red-300 ios-button-fix"
               >
                 <Wallet className="h-4 w-4" />
-                <span className="text-xs mt-0.5 ios-text-fix">Exit</span>
+                <span className="text-xs mt-0.5 ios-text-fix">Disconnect</span>
               </button>
             </div>
           </div>

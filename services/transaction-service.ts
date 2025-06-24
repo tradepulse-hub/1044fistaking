@@ -1,6 +1,6 @@
 import { MiniKit } from "@worldcoin/minikit-js"
 import { ethers } from "ethers"
-// import { errorLogger } from "@/components/error-console"
+import { errorLogger } from "@/components/error-console"
 
 // Contract addresses
 const STAKING_CONTRACT = "0x51bd987FA376C92c5293cff5E62963D7Ea3e51Bf"
@@ -69,7 +69,7 @@ class TransactionService {
         throw new Error("World App not detected. Please open in World App.")
       }
 
-      const amountWei = ethers.utils.parseEther(amount)
+      const amountWei = ethers.parseEther(amount)
 
       const transactionPayload = {
         transaction: [
@@ -103,7 +103,7 @@ class TransactionService {
         const errorMsg = this.formatError("STAKE", result.finalPayload)
         const debugUrl = result.finalPayload?.details?.debugUrl
 
-        console.error("Stake Failed:", errorMsg, {
+        errorLogger.logError("Stake Failed", errorMsg, {
           ...result,
           debugUrl,
         })
@@ -124,7 +124,7 @@ class TransactionService {
     } catch (error) {
       const errorMsg = `Stake failed: ${error instanceof Error ? error.message : String(error)}`
       console.error("❌ Stake exception:", error)
-      console.error("Stake Exception:", errorMsg, { error, amount, walletAddress })
+      errorLogger.logError("Stake Exception", errorMsg, { error, amount, walletAddress })
       return { success: false, error: errorMsg }
     }
   }
@@ -136,7 +136,7 @@ class TransactionService {
         throw new Error("World App not detected. Please open in World App.")
       }
 
-      const amountWei = ethers.utils.parseEther(amount)
+      const amountWei = ethers.parseEther(amount)
 
       const transactionPayload = {
         transaction: [
@@ -157,7 +157,7 @@ class TransactionService {
         const errorMsg = this.formatError("UNSTAKE", result.finalPayload)
         const debugUrl = result.finalPayload?.details?.debugUrl
 
-        console.error("Unstake Failed:", errorMsg, {
+        errorLogger.logError("Unstake Failed", errorMsg, {
           ...result,
           debugUrl,
         })
@@ -177,7 +177,7 @@ class TransactionService {
       return { success: false, error: "Unexpected response from MiniKit" }
     } catch (error) {
       const errorMsg = `Unstake failed: ${error instanceof Error ? error.message : String(error)}`
-      console.error("Unstake Exception:", errorMsg, { error, amount })
+      errorLogger.logError("Unstake Exception", errorMsg, { error, amount })
       return { success: false, error: errorMsg }
     }
   }
@@ -208,7 +208,7 @@ class TransactionService {
         const errorMsg = this.formatError("CLAIM", result.finalPayload)
         const debugUrl = result.finalPayload?.details?.debugUrl
 
-        console.error("Claim Failed:", errorMsg, {
+        errorLogger.logError("Claim Failed", errorMsg, {
           ...result,
           debugUrl,
         })
@@ -228,7 +228,7 @@ class TransactionService {
       return { success: false, error: "Unexpected response from MiniKit" }
     } catch (error) {
       const errorMsg = `Claim failed: ${error instanceof Error ? error.message : String(error)}`
-      console.error("Claim Exception:", errorMsg, { error })
+      errorLogger.logError("Claim Exception", errorMsg, { error })
       return { success: false, error: errorMsg }
     }
   }

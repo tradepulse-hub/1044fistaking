@@ -12,7 +12,7 @@ import { tptStakingService } from "@/services/tpt-staking-service"
 import { drachmaStakingService } from "@/services/drachma-staking-service"
 import { drachmaTransactionService } from "@/services/drachma-transaction-service"
 import { tptTransactionService } from "@/services/tpt-transaction-service"
-import WalletSwap from "@/components/wallet-swap" // Import the new component
+import WalletTransfers from "@/app/components/WalletTransfers" // Import the WalletTransfers component
 
 export default function TPTStakingApp() {
   const [isConnected, setIsConnected] = useState(false)
@@ -325,13 +325,16 @@ export default function TPTStakingApp() {
 
   const renderContent = () => {
     if (activeTab === "wallet") {
+      // Render the WalletTransfers component directly
       return (
-        <WalletSwap
-          walletAddress={walletAddress}
-          tpfBalance={tpfBalance}
-          isRefreshing={isRefreshing}
-          onRefresh={() => loadUserData(walletAddress)}
-        />
+        <div className="space-y-3 scroll-container">
+          <Card className="elegant-card bg-slate-900/60">
+            <CardContent className="p-3 space-y-3">
+              <h3 className="text-sm font-semibold text-slate-300">Wallet & Transfers</h3>
+              <WalletTransfers />
+            </CardContent>
+          </Card>
+        </div>
       )
     }
 

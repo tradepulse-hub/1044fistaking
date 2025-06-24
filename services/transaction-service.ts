@@ -1,42 +1,35 @@
-import EventEmitter2 from "eventemitter2"
+interface TransactionStatus {
+  transactionId: string
+  transactionHash?: string
+  transactionStatus: "pending" | "confirmed" | "failed"
+  isLoading: boolean
+}
 
+/**
+ * Minimal transaction-status helper used by hooks/use-transaction-monitor.
+ * It only proxies to the /api/transaction-status route.
+ */
 class TransactionService {
-  private eventEmitter: EventEmitter2
+  private static instance: TransactionService
 
-  constructor() {
-    this.eventEmitter = new EventEmitter2()
-  }
-
-  public on(event: string, listener: (...args: any[]) => void): void {
-    this.eventEmitter.on(event, listener)
-  }
-
-  public emit(event: string, ...args: any[]): void {
-    this.eventEmitter.emit(event, ...args)
-  }
-
-  public async processTransaction(transactionData: any): Promise<void> {
-    // Simulate transaction processing
-    console.log("Processing transaction:", transactionData)
-
-    // Emit events during the transaction lifecycle
-    this.emit("transaction.started", transactionData)
-
-    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate processing time
-
-    // Simulate success or failure
-    const success = Math.random() > 0.2 // 80% success rate
-
-    if (success) {
-      this.emit("transaction.succeeded", transactionData)
-      console.log("Transaction succeeded:", transactionData)
-    } else {
-      this.emit("transaction.failed", transactionData)
-      console.log("Transaction failed:", transactionData)
+  static getInstance(): TransactionService {
+    if (!TransactionService.instance) {
+      TransactionService.instance = new TransactionService()
     }
+    return TransactionService.instance
+  }
 
-    this.emit("transaction.completed", transactionData, success)
+  /** Query the status of a World App transaction via our API route. */
+  async checkTransactionStatus(transactionId: string): Promise<TransactionStatus | null> {
+    try {
+      const res = await fetch(`/api/transaction-status?id=${transactionId}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return await res.json()
+    } catch (err) {
+      console.error("[transaction-service] checkTransactionStatus failed:", err)
+      return null
+    }
   }
 }
 
-export default TransactionService
+export const transactionService = TransactionService.getInstance()

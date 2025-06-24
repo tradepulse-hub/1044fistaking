@@ -466,7 +466,7 @@ select {
   }
   100% {
     opacity: 0.05;
-    transform: scale(1.8) rotate(360deg);
+    transform: scale(1.8) rotate(-360deg);
     filter: blur(10px);
   }
 }

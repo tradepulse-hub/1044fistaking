@@ -3,13 +3,13 @@ import { ethers } from "ethers"
 // Configuração da rede Worldchain
 const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public"
 
-// Contract address - PORTUGAFI ATUALIZADO
-const PORTUGAFI_STAKING_CONTRACT = "0xACc9d1bC40546a4EE05f1B54C7847772F4d8990f"
+// Contract address - TPT
+const TPT_STAKING_CONTRACT = "0x123456789abcdef123456789abcdef123456789a" // Endereço do contrato TPT
 const TPF_TOKEN = "0x834a73c0a83F3BCe349A116FFB2A4c2d1C651E45"
-const PORTUGAFI_TOKEN = "0x4891D193C882bF16634E342359A18effE97872a4" // Token PortugaFi correto
+const TPT_TOKEN = "0x987654321fedcba987654321fedcba987654321b" // Token TPT
 
-// ABI COMPLETO BASEADO NO CONTRATO REAL FORNECIDO
-const PORTUGAFI_STAKING_ABI = [
+// ABI COMPLETO BASEADO NO CONTRATO SOFT STAKING
+const TPT_STAKING_ABI = [
   {
     inputs: [
       { internalType: "address", name: "_tpfToken", type: "address" },
@@ -35,13 +35,6 @@ const PORTUGAFI_STAKING_ABI = [
   {
     inputs: [{ internalType: "address", name: "_user", type: "address" }],
     name: "calculateRewardsPerSecond",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "_user", type: "address" }],
-    name: "calculateRewardsPerDay",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -90,49 +83,6 @@ const PORTUGAFI_STAKING_ABI = [
     type: "function",
   },
   {
-    inputs: [
-      { internalType: "address", name: "_user", type: "address" },
-      { internalType: "uint256", name: "_days", type: "uint256" },
-    ],
-    name: "simulateRewards",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "_user", type: "address" }],
-    name: "getCalculationDetails",
-    outputs: [
-      { internalType: "uint256", name: "tpfBalance", type: "uint256" },
-      { internalType: "uint256", name: "timeStaked", type: "uint256" },
-      { internalType: "uint256", name: "apyRateUsed", type: "uint256" },
-      { internalType: "uint256", name: "basisPoints", type: "uint256" },
-      { internalType: "uint256", name: "secondsPerYear", type: "uint256" },
-      { internalType: "uint256", name: "calculatedRewards", type: "uint256" },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getStats",
-    outputs: [
-      { internalType: "uint256", name: "totalUsers", type: "uint256" },
-      { internalType: "uint256", name: "totalRewards", type: "uint256" },
-      { internalType: "uint256", name: "contractRewardBalance", type: "uint256" },
-      { internalType: "uint256", name: "currentAPY", type: "uint256" },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "_user", type: "address" }],
-    name: "getTimeToNextClaim",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "owner",
     outputs: [{ internalType: "address", name: "", type: "address" }],
@@ -164,7 +114,7 @@ interface UserInfo {
   contractAPY: string
 }
 
-class PortugaFiStakingService {
+class TPTStakingService {
   private provider: ethers.JsonRpcProvider | null = null
   private contract: ethers.Contract | null = null
   private initialized = false
@@ -179,43 +129,35 @@ class PortugaFiStakingService {
     if (this.initialized) return
 
     try {
-      console.log("🇵🇹 Initializing PortugaFi Staking Service...")
-      console.log(`📋 Contract Address: ${PORTUGAFI_STAKING_CONTRACT}`)
+      console.log("🎯 Initializing TPT Staking Service...")
+      console.log(`📋 Contract Address: ${TPT_STAKING_CONTRACT}`)
 
       this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
       const network = await this.provider.getNetwork()
       console.log(`🌐 Connected to network: ${network.name} (${network.chainId})`)
 
-      this.contract = new ethers.Contract(PORTUGAFI_STAKING_CONTRACT, PORTUGAFI_STAKING_ABI, this.provider)
+      this.contract = new ethers.Contract(TPT_STAKING_CONTRACT, TPT_STAKING_ABI, this.provider)
 
-      // Test contract com ABI real
+      // Test contract
       try {
         const apy = await this.contract.getCurrentAPY()
         const apyPercentage = (Number(apy) / 100).toFixed(2)
-        console.log(`✅ PortugaFi Contract APY: ${apyPercentage}%`)
+        console.log(`✅ TPT Contract APY: ${apyPercentage}%`)
 
         const tokenAddresses = await this.contract.getTokenAddresses()
         console.log(`✅ TPF Token: ${tokenAddresses[0]}`)
-        console.log(`✅ PortugaFi Reward Token: ${tokenAddresses[1]}`)
+        console.log(`✅ TPT Reward Token: ${tokenAddresses[1]}`)
 
         const rewardBalance = await this.contract.getRewardBalance()
-        console.log(`✅ PortugaFi Reward Balance: ${ethers.formatEther(rewardBalance)}`)
-
-        const stats = await this.contract.getStats()
-        console.log(`✅ PortugaFi Stats:`, {
-          totalUsers: Number(stats[0]),
-          totalRewards: ethers.formatEther(stats[1]),
-          contractRewardBalance: ethers.formatEther(stats[2]),
-          currentAPY: Number(stats[3]) / 100 + "%",
-        })
+        console.log(`✅ TPT Reward Balance: ${ethers.formatEther(rewardBalance)}`)
       } catch (error) {
-        console.warn("⚠️ PortugaFi contract test calls failed:", error)
+        console.warn("⚠️ TPT contract test calls failed:", error)
       }
 
       this.initialized = true
-      console.log("✅ PortugaFi Staking Service initialized successfully")
+      console.log("✅ TPT Staking Service initialized successfully")
     } catch (error) {
-      console.error("❌ Failed to initialize PortugaFi Staking Service:", error)
+      console.error("❌ Failed to initialize TPT Staking Service:", error)
     }
   }
 
@@ -227,19 +169,19 @@ class PortugaFiStakingService {
       }
 
       if (!this.contract) {
-        console.log("PortugaFi contract not initialized, using default APY")
+        console.log("TPT contract not initialized, using default APY")
         return "1.00"
       }
 
-      console.log("🔍 Fetching real APY from PortugaFi contract...")
+      console.log("🔍 Fetching real APY from TPT contract...")
 
       const apy = await this.contract.getCurrentAPY()
       const apyPercentage = (Number(apy) / 100).toFixed(2)
 
-      console.log(`✅ Real PortugaFi APY fetched from contract: ${apyPercentage}%`)
+      console.log(`✅ Real TPT APY fetched from contract: ${apyPercentage}%`)
       return apyPercentage
     } catch (error) {
-      console.error("❌ Error fetching real APY from PortugaFi contract:", error)
+      console.error("❌ Error fetching real APY from TPT contract:", error)
       return "1.00" // Default to 1% if contract call fails
     }
   }
@@ -252,14 +194,14 @@ class PortugaFiStakingService {
       }
 
       if (!this.contract || !walletAddress) {
-        throw new Error("PortugaFi contract not initialized or wallet address missing")
+        throw new Error("TPT contract not initialized or wallet address missing")
       }
 
-      console.log(`🔍 Getting PortugaFi user info for: ${walletAddress}`)
+      console.log(`🔍 Getting TPT user info for: ${walletAddress}`)
 
       // Obter informações do usuário usando ABI real
       const userInfo = await this.contract.getUserInfo(walletAddress)
-      console.log("📋 Raw PortugaFi user info:", userInfo)
+      console.log("📋 Raw TPT user info:", userInfo)
 
       // Obter APY real do contrato
       const contractAPY = await this.getContractAPY()
@@ -287,13 +229,13 @@ class PortugaFiStakingService {
         contractAPY,
       }
 
-      console.log("✅ PortugaFi user info processed:", result)
+      console.log("✅ TPT user info processed:", result)
       return result
     } catch (error) {
-      console.error("❌ Error getting PortugaFi user info:", error)
+      console.error("❌ Error getting TPT user info:", error)
 
       // Fallback com dados demo usando 1% APY
-      console.log("🔄 Using fallback demo data for PortugaFi with 1% APY")
+      console.log("🔄 Using fallback demo data for TPT with 1% APY")
       const demoBalance = 76476285.0
       const apy = 0.01 // 1% APY
       const rewardsPerSec = (demoBalance * apy) / (365 * 24 * 60 * 60)
@@ -321,39 +263,11 @@ class PortugaFiStakingService {
       }
 
       const canClaim = await this.contract.canClaim(walletAddress)
-      console.log(`✅ PortugaFi can claim check: ${canClaim}`)
+      console.log(`✅ TPT can claim check: ${canClaim}`)
       return canClaim
     } catch (error) {
-      console.error("Error checking if user can claim PortugaFi rewards:", error)
+      console.error("Error checking if user can claim TPT rewards:", error)
       return false
-    }
-  }
-
-  // Obter detalhes de cálculo para debug
-  async getCalculationDetails(walletAddress: string) {
-    try {
-      if (!this.initialized) {
-        await this.initialize()
-      }
-
-      if (!this.contract || !walletAddress) {
-        return null
-      }
-
-      const details = await this.contract.getCalculationDetails(walletAddress)
-      console.log("🔍 PortugaFi Calculation Details:", {
-        tpfBalance: ethers.formatEther(details[0]),
-        timeStaked: Number(details[1]) + " seconds",
-        apyRateUsed: Number(details[2]) / 100 + "%",
-        basisPoints: Number(details[3]),
-        secondsPerYear: Number(details[4]),
-        calculatedRewards: ethers.formatEther(details[5]),
-      })
-
-      return details
-    } catch (error) {
-      console.error("Error getting PortugaFi calculation details:", error)
-      return null
     }
   }
 
@@ -362,7 +276,7 @@ class PortugaFiStakingService {
   }
 
   getContractAddress() {
-    return PORTUGAFI_STAKING_CONTRACT
+    return TPT_STAKING_CONTRACT
   }
 
   // Testar conectividade do contrato
@@ -372,27 +286,25 @@ class PortugaFiStakingService {
         return false
       }
 
-      console.log("🧪 Testing PortugaFi contract connectivity...")
+      console.log("🧪 Testing TPT contract connectivity...")
 
       const apy = await this.contract.getCurrentAPY()
       const tokenAddresses = await this.contract.getTokenAddresses()
       const rewardBalance = await this.contract.getRewardBalance()
-      const stats = await this.contract.getStats()
 
-      console.log("🧪 PortugaFi Contract Test Results:")
+      console.log("🧪 TPT Contract Test Results:")
       console.log(`APY: ${Number(apy) / 100}%`)
       console.log(`TPF Token: ${tokenAddresses[0]}`)
       console.log(`Reward Token: ${tokenAddresses[1]}`)
       console.log(`Reward Balance: ${ethers.formatEther(rewardBalance)}`)
-      console.log(`Total Rewards Claimed: ${ethers.formatEther(stats[1])}`)
 
       return apy > 0 && tokenAddresses[0] === TPF_TOKEN
     } catch (error) {
-      console.error("❌ PortugaFi contract test failed:", error)
+      console.error("❌ TPT contract test failed:", error)
       return false
     }
   }
 }
 
 // Exportar instância única
-export const portugaFiStakingService = new PortugaFiStakingService()
+export const tptStakingService = new TPTStakingService()

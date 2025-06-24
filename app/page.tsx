@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Lightbulb,
   Zap,
+  ArrowLeftRight,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
@@ -27,6 +28,8 @@ import { drachmaTransactionService } from "@/services/drachma-transaction-servic
 import { useTransactionMonitor } from "@/hooks/use-transaction-monitor"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useRef } from "react"
+import { SwapInterface } from "@/components/swap-interface"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 // Temporary lightweight logger after removing debug tools
 const errorLogger = {
@@ -59,6 +62,8 @@ export default function TPTStakingApp() {
   const tptRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const transactionStatus = useTransactionMonitor(currentTransactionId)
+
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
 
   useEffect(() => {
     checkSession()
@@ -592,7 +597,29 @@ export default function TPTStakingApp() {
         {/* TPF Balance - COMPACT TOP */}
         <div className="text-center py-2 ios-safe-top">
           <div className="text-xs text-slate-400 mb-1 ios-text-fix">Your TPF Balance</div>
-          <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="text-lg font-bold silver-text ios-text-fix">{formatBalance(tpfBalance)} TPF</div>
+
+            {/* Swap Icon */}
+            <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
+              <DialogTrigger asChild>
+                <button className="p-1 rounded-full bg-slate-700/50 hover:bg-slate-600/50 transition-colors border border-slate-600/30 hover:border-slate-500/50">
+                  <ArrowLeftRight className="h-3 w-3 text-slate-300" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md bg-slate-900/95 border-slate-700/50 backdrop-blur-xl">
+                <DialogHeader>
+                  <DialogTitle className="text-slate-300 flex items-center gap-2">
+                    <ArrowLeftRight className="h-4 w-4" />
+                    Token Swap
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="mt-4">
+                  <SwapInterface userAddress={walletAddress} />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* ENGLISH MESSAGE */}

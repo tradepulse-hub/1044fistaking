@@ -10,7 +10,9 @@
   "dependencies": {
     "@holdstation/worldchain-ethers-v5": "latest",
     "@holdstation/worldchain-sdk": "latest",
+    "@radix-ui/react-dialog": "latest",
     "@radix-ui/react-slot": "^1.0.2",
+    "@types/react-dom": "latest",
     "@uniswap/smart-order-router": "latest",
     "@worldcoin/minikit-js": "latest",
     "async-mutex": "latest",

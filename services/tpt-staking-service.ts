@@ -4,9 +4,9 @@ import { ethers } from "ethers"
 const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public"
 
 // Contract address - TPT
-const TPT_STAKING_CONTRACT = "0x123456789abcdef123456789abcdef123456789a" // Endereço do contrato TPT
+const TPT_STAKING_CONTRACT = "0x4c1f9CF3c5742c73a00864a32048988b87121e2f" // Endereço do contrato TPT
 const TPF_TOKEN = "0x834a73c0a83F3BCe349A116FFB2A4c2d1C651E45"
-const TPT_TOKEN = "0x987654321fedcba987654321fedcba987654321b" // Token TPT
+const TPT_TOKEN = "0xE4501fC658bea09D44512494C950c2b2748b176A" // Token TPT
 
 // ABI COMPLETO BASEADO NO CONTRATO SOFT STAKING
 const TPT_STAKING_ABI = [

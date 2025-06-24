@@ -1,7 +1,7 @@
 import { MiniKit } from "@worldcoin/minikit-js"
 
 // Contract address - TPT
-const TPT_STAKING_CONTRACT = "0x123456789abcdef123456789abcdef123456789a"
+const TPT_STAKING_CONTRACT = "0x4c1f9CF3c5742c73a00864a32048988b87121e2f"
 
 // ABI IDÊNTICO AO QUE FUNCIONA
 const TPT_STAKING_ABI = [

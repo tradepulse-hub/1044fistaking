@@ -34,9 +34,9 @@ export default function TPTStakingApp() {
   // Drachma Token State - NO COUNTER
   const [drachmaPendingRewards, setDrachmaPendingRewards] = useState("Surprise!")
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // For transaction loading (with progress)
   const [loadingProgress, setLoadingProgress] = useState(0) // New state for loading progress
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false) // For background data refresh
   const [networkError, setNetworkError] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
 
@@ -50,6 +50,7 @@ export default function TPTStakingApp() {
 
   const checkSession = async () => {
     try {
+      setIsRefreshing(true) // Start refreshing for session check
       const response = await fetch("/api/session")
 
       if (response.ok) {
@@ -68,6 +69,8 @@ export default function TPTStakingApp() {
       errorLogger.logError("Session Check Failed", `Failed to check existing session: ${error}`, {
         error: error instanceof Error ? error.message : String(error),
       })
+    } finally {
+      setIsRefreshing(false) // End refreshing for session check
     }
   }
 
@@ -151,7 +154,7 @@ export default function TPTStakingApp() {
   // Carregar dados de todos os tokens
   const loadUserData = async (userAddress: string) => {
     try {
-      setIsRefreshing(true)
+      setIsRefreshing(true) // Start refreshing for data load
 
       console.log("🔄 Loading user data for TPT and Drachma...")
 
@@ -196,7 +199,7 @@ export default function TPTStakingApp() {
         error: error instanceof Error ? error.message : String(error),
       })
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false) // End refreshing for data load
     }
   }
 
@@ -256,7 +259,7 @@ export default function TPTStakingApp() {
     }
   }, [isConnected, tptRewardsPerSecond])
 
-  // Loading progress animation
+  // Loading progress animation for transactions
   useEffect(() => {
     if (isLoading) {
       setLoadingProgress(0) // Ensure it starts from 0
@@ -444,7 +447,7 @@ export default function TPTStakingApp() {
 
                   {/* Project Info */}
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-white">TPulseFi</h4>
+                    <h4 className="text-sm font-bold text-white">TPulseFi</h4>
                     <p className="text-xs text-slate-400">Multi-Token Soft Staking on World Chain</p>
 
                     <a
@@ -683,7 +686,7 @@ export default function TPTStakingApp() {
             </div>
 
             {/* Loading Indicator */}
-            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} />
+            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} isRefreshing={isRefreshing} />
 
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
@@ -736,7 +739,7 @@ export default function TPTStakingApp() {
             </div>
 
             {/* Loading Indicator */}
-            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} />
+            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} isRefreshing={isRefreshing} />
 
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">

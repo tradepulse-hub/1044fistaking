@@ -98,8 +98,8 @@ class HoldstationBalanceService {
         rawBalance: rawBalance,
       })
 
-      // Format balance
-      const formattedBalance = ethers.formatUnits(rawBalance, tpfDetails.decimals)
+      // Format balance using ethers v5 utility
+      const formattedBalance = ethers.utils.formatUnits(rawBalance, tpfDetails.decimals)
 
       const result: TokenBalance = {
         address: TPF_TOKEN_ADDRESS,
@@ -115,11 +115,11 @@ class HoldstationBalanceService {
     } catch (error) {
       console.error("❌ Error getting TPF balance with Holdstation:", error)
 
-      // Fallback to demo data
+      // Fallback to demo data using ethers v5 utility
       console.log("🔄 Using fallback demo data")
       return {
         address: TPF_TOKEN_ADDRESS,
-        balance: ethers.parseEther("76476285.0").toString(),
+        balance: ethers.utils.parseEther("76476285.0").toString(),
         formattedBalance: "76476285.0",
         decimals: 18,
         symbol: "TPF",
@@ -161,7 +161,8 @@ class HoldstationBalanceService {
         const rawBalance = balances[tokenAddress]
 
         if (tokenDetails && rawBalance !== undefined) {
-          const formattedBalance = ethers.formatUnits(rawBalance, tokenDetails.decimals)
+          // Format balance using ethers v5 utility
+          const formattedBalance = ethers.utils.formatUnits(rawBalance, tokenDetails.decimals)
 
           result[tokenAddress] = {
             address: tokenAddress,

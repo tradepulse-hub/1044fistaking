@@ -1,26 +1,23 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
-import { MiniKitProvider } from "@/components/minikit-provider"
-
-const inter = Inter({ subsets: ["latin"] })
+import Providers from "@/lib/providers"
 
 export const metadata: Metadata = {
-  title: "TPulseFi Staking",
-  description: "Dual token staking on World Chain",
-    generator: 'v0.dev'
+  title: "v0 App",
+  description: "Created with v0",
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <MiniKitProvider>{children}</MiniKitProvider>
+      <body>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

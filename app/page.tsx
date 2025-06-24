@@ -4,20 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  Wallet,
-  AlertCircle,
-  FolderOpen,
-  Info,
-  Home,
-  RefreshCw,
-  Wifi,
-  Shield,
-  Mail,
-  ExternalLink,
-  Lightbulb,
-  Zap,
-} from "lucide-react"
+import { Wallet, AlertCircle, Info, Home, RefreshCw, Wifi, Shield, Zap } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
 import { MiniKit } from "@worldcoin/minikit-js"
@@ -25,6 +12,7 @@ import { tptStakingService } from "@/services/tpt-staking-service"
 import { drachmaStakingService } from "@/services/drachma-staking-service"
 import { drachmaTransactionService } from "@/services/drachma-transaction-service"
 import { tptTransactionService } from "@/services/tpt-transaction-service"
+import WalletSwap from "@/components/wallet-swap" // Import the new component
 
 export default function TPTStakingApp() {
   const [isConnected, setIsConnected] = useState(false)
@@ -336,70 +324,14 @@ export default function TPTStakingApp() {
   }
 
   const renderContent = () => {
-    if (activeTab === "projects") {
+    if (activeTab === "wallet") {
       return (
-        <div className="space-y-3 scroll-container">
-          {/* Contact Info Banner */}
-          <Card className="elegant-card bg-gradient-to-r from-slate-800/40 to-gray-800/40 border-slate-600/50">
-            <CardContent className="p-3">
-              <div className="flex items-start gap-2">
-                <Lightbulb className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h4 className="text-xs font-semibold text-slate-300">Have an idea for your project?</h4>
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    Contact TPulseFi team for World Chain projects.
-                  </p>
-                  <div className="flex items-center gap-1 text-xs">
-                    <Mail className="h-3 w-3 text-slate-400" />
-                    <a
-                      href="mailto:support@tradepulsetoken.com"
-                      className="text-slate-400 hover:text-slate-300 transition-colors"
-                    >
-                      support@tradepulsetoken.com
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Projects Section */}
-          <Card className="elegant-card bg-slate-900/60">
-            <CardContent className="p-3 space-y-3">
-              <h3 className="text-sm font-semibold text-slate-300">TPulseFi Projects</h3>
-
-              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/30">
-                <div className="space-y-2">
-                  {/* Project Banner */}
-                  <div className="relative w-full h-16 rounded-lg overflow-hidden bg-gradient-to-r from-slate-800 to-gray-700">
-                    <Image
-                      src="/tpulsefi-banner.jpg"
-                      alt="TPulseFi - The Global Crypto Bridge"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-
-                  {/* Project Info */}
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-white">TPulseFi</h4>
-                    <p className="text-xs text-slate-400">Multi-Token Soft Staking on World Chain</p>
-
-                    <a
-                      href="https://worldcoin.org/mini-app?app_id=app_a3a55e132983350c67923dd57dc22c5e&app_mode=mini-app"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-300 transition-colors"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Open TPulseFi
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <WalletSwap
+          walletAddress={walletAddress}
+          tpfBalance={tpfBalance}
+          isRefreshing={isRefreshing}
+          onRefresh={() => loadUserData(walletAddress)}
+        />
       )
     }
 
@@ -796,13 +728,13 @@ export default function TPTStakingApp() {
                 <span className="text-xs mt-0.5 ios-text-fix">Home</span>
               </button>
               <button
-                onClick={() => setActiveTab("projects")}
+                onClick={() => setActiveTab("wallet")}
                 className={`flex flex-col items-center p-1 transition-colors ios-button-fix ${
-                  activeTab === "projects" ? "text-slate-300" : "text-slate-500"
+                  activeTab === "wallet" ? "text-slate-300" : "text-slate-500"
                 }`}
               >
-                <FolderOpen className="h-4 w-4" />
-                <span className="text-xs mt-0.5 ios-text-fix">Projects</span>
+                <Wallet className="h-4 w-4" />
+                <span className="text-xs mt-0.5 ios-text-fix">Wallet</span>
               </button>
               <button
                 onClick={() => setActiveTab("info")}

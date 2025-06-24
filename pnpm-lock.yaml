@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@holdstation/worldchain-ethers-v5':
+        specifier: latest
+        version: 4.0.22(@holdstation/worldchain-sdk@4.0.22(@uniswap/smart-order-router@4.22.1(hardhat@2.25.0(typescript@5.0.2))(jsbi@3.2.5))(async-mutex@0.5.0)(bignumber.js@9.3.0)(idb@8.0.3)(node-cache@5.1.2))(ethers@6.14.4)
       '@holdstation/worldchain-sdk':
         specifier: latest
         version: 4.0.22(@uniswap/smart-order-router@4.22.1(hardhat@2.25.0(typescript@5.0.2))(jsbi@3.2.5))(async-mutex@0.5.0)(bignumber.js@9.3.0)(idb@8.0.3)(node-cache@5.1.2)
@@ -240,6 +243,12 @@ packages:
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
+
+  '@holdstation/worldchain-ethers-v5@4.0.22':
+    resolution: {integrity: sha512-NoxDzpBvd6o2PmLnAYq+aOOvS0jT73NrJaOvMkhnG3tGdiRoLqs/W3DKNR62UqSCnUcoh//l8jkBxaU83VrUaQ==}
+    peerDependencies:
+      '@holdstation/worldchain-sdk': ^4.0.0
+      ethers: ^5.8.0
 
   '@holdstation/worldchain-sdk@4.0.22':
     resolution: {integrity: sha512-0iyLJr6ccjxL4kgXU3vNxFW8JhGdnYQho+EbdwjCWZ3wZcksDg6ThSaX6MvVoRDLoXV4+FeLDr7Tzmx03lErHA==}
@@ -2662,6 +2671,11 @@ snapshots:
       '@ethersproject/strings': 5.8.0
 
   '@fastify/busboy@2.1.1': {}
+
+  '@holdstation/worldchain-ethers-v5@4.0.22(@holdstation/worldchain-sdk@4.0.22(@uniswap/smart-order-router@4.22.1(hardhat@2.25.0(typescript@5.0.2))(jsbi@3.2.5))(async-mutex@0.5.0)(bignumber.js@9.3.0)(idb@8.0.3)(node-cache@5.1.2))(ethers@6.14.4)':
+    dependencies:
+      '@holdstation/worldchain-sdk': 4.0.22(@uniswap/smart-order-router@4.22.1(hardhat@2.25.0(typescript@5.0.2))(jsbi@3.2.5))(async-mutex@0.5.0)(bignumber.js@9.3.0)(idb@8.0.3)(node-cache@5.1.2)
+      ethers: 6.14.4
 
   '@holdstation/worldchain-sdk@4.0.22(@uniswap/smart-order-router@4.22.1(hardhat@2.25.0(typescript@5.0.2))(jsbi@3.2.5))(async-mutex@0.5.0)(bignumber.js@9.3.0)(idb@8.0.3)(node-cache@5.1.2)':
     dependencies:

@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@holdstation/worldchain-ethers-v5": "latest",
     "@holdstation/worldchain-sdk": "latest",
     "@radix-ui/react-slot": "^1.0.2",
     "@uniswap/smart-order-router": "latest",

@@ -35,11 +35,13 @@ export default function TPTStakingApp() {
   const [drachmaPendingRewards, setDrachmaPendingRewards] = useState("Surprise!")
 
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingProgress, setLoadingProgress] = useState(0) // New state for loading progress
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [networkError, setNetworkError] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
 
   const tptRewardsIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const loadingProgressIntervalRef = useRef<NodeJS.Timeout | null>(null) // Ref for loading progress interval
   const audioRef = useRef<HTMLAudioElement | null>(null) // Ref for audio element
 
   useEffect(() => {
@@ -72,6 +74,8 @@ export default function TPTStakingApp() {
   const connectWorldWallet = async () => {
     try {
       setIsLoading(true)
+      setLoadingProgress(0) // Reset progress on start
+      audioRef.current?.play() // Play loading sound
 
       if (!MiniKit.isInstalled()) {
         console.log("Please open in World App")
@@ -138,6 +142,9 @@ export default function TPTStakingApp() {
       console.log("Connection failed, please try again")
     } finally {
       setIsLoading(false)
+      setLoadingProgress(0) // Reset progress on finish
+      audioRef.current?.pause() // Pause loading sound
+      audioRef.current?.load() // Reset audio to start
     }
   }
 
@@ -249,6 +256,33 @@ export default function TPTStakingApp() {
     }
   }, [isConnected, tptRewardsPerSecond])
 
+  // Loading progress animation
+  useEffect(() => {
+    if (isLoading) {
+      setLoadingProgress(0) // Ensure it starts from 0
+      loadingProgressIntervalRef.current = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 95) {
+            // Stop at 95% to indicate it's almost done but waiting for confirmation
+            clearInterval(loadingProgressIntervalRef.current!)
+            return 95
+          }
+          return prev + 1 // Increment by 1%
+        })
+      }, 50) // Update every 50ms for a smooth animation
+    } else {
+      if (loadingProgressIntervalRef.current) {
+        clearInterval(loadingProgressIntervalRef.current)
+      }
+      setLoadingProgress(0) // Reset to 0 when not loading
+    }
+    return () => {
+      if (loadingProgressIntervalRef.current) {
+        clearInterval(loadingProgressIntervalRef.current)
+      }
+    }
+  }, [isLoading])
+
   const handleClaimTPTRewards = async () => {
     try {
       setIsLoading(true)
@@ -283,6 +317,8 @@ export default function TPTStakingApp() {
       })
     } finally {
       setIsLoading(false)
+      setLoadingProgress(100) // Set to 100% briefly before resetting
+      setTimeout(() => setLoadingProgress(0), 300) // Reset after a short delay
       audioRef.current?.pause() // Pause loading sound
       audioRef.current?.load() // Reset audio to start
     }
@@ -322,6 +358,8 @@ export default function TPTStakingApp() {
       })
     } finally {
       setIsLoading(false)
+      setLoadingProgress(100) // Set to 100% briefly before resetting
+      setTimeout(() => setLoadingProgress(0), 300) // Reset after a short delay
       audioRef.current?.pause() // Pause loading sound
       audioRef.current?.load() // Reset audio to start
     }
@@ -645,7 +683,7 @@ export default function TPTStakingApp() {
             </div>
 
             {/* Loading Indicator */}
-            <LoadingIndicator isLoading={isLoading} />
+            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} />
 
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
@@ -698,7 +736,7 @@ export default function TPTStakingApp() {
             </div>
 
             {/* Loading Indicator */}
-            <LoadingIndicator isLoading={isLoading} />
+            <LoadingIndicator isLoading={isLoading} progress={loadingProgress} />
 
             {/* Claim Button - ACTIVE */}
             <div className="mt-2">
@@ -738,7 +776,7 @@ export default function TPTStakingApp() {
       </div>
 
       {/* Audio element for loading sound */}
-      <audio ref={audioRef} src="/placeholder.mp3?query=loading%20sound" loop preload="auto" />
+      <audio ref={audioRef} src="/loading-sound.mp3" loop preload="auto" crossOrigin="anonymous" />
 
       {/* Main container */}
       {!isConnected ? (

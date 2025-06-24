@@ -165,7 +165,7 @@ interface UserInfo {
 }
 
 class DrachmaStakingService {
-  private provider: ethers.JsonRpcProvider | null = null
+  private provider: ethers.providers.JsonRpcProvider | null = null
   private contract: ethers.Contract | null = null
   private initialized = false
 
@@ -183,7 +183,7 @@ class DrachmaStakingService {
       console.log(`📋 Contract Address: ${DRACHMA_STAKING_CONTRACT}`)
       console.log(`📋 WDD Token Address: ${WDD_TOKEN}`)
 
-      this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
+      this.provider = new ethers.providers.JsonRpcProvider(WORLDCHAIN_RPC)
       const network = await this.provider.getNetwork()
       console.log(`🌐 Connected to network: ${network.name} (${network.chainId})`)
 

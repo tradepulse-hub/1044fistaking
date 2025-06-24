@@ -598,17 +598,3 @@ select {
     padding-right: max(1rem, env(safe-area-inset-right));
   }
 }
-
-/* Loading bar animation */
-@keyframes loading-bar-animation {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-.animate-loading-bar {
-  animation: loading-bar-animation 1.5s linear infinite;
-}

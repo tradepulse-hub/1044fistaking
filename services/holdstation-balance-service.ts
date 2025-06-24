@@ -25,7 +25,7 @@ interface TokenDetails {
 }
 
 class HoldstationBalanceService {
-  private provider: ethers.JsonRpcProvider | null = null
+  private provider: ethers.providers.JsonRpcProvider | null = null
   private tokenProvider: TokenProvider | null = null
   private initialized = false
 
@@ -44,7 +44,7 @@ class HoldstationBalanceService {
       console.log(`📋 TPF Token: ${TPF_TOKEN_ADDRESS}`)
 
       // Create ethers provider
-      this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
+      this.provider = new ethers.providers.JsonRpcProvider(WORLDCHAIN_RPC)
 
       // Test connection
       const network = await this.provider.getNetwork()

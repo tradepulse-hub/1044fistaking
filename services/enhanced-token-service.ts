@@ -74,7 +74,7 @@ class EnhancedTokenService {
       console.log("Initializing Enhanced Token Service...")
 
       // Criar provider do ethers
-      this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
+      this.provider = new ethers.providers.JsonRpcProvider(WORLDCHAIN_RPC)
 
       // Testar conexão
       const network = await this.provider.getNetwork()

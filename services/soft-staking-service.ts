@@ -110,7 +110,7 @@ class SoftStakingService {
       console.log("🚀 Initializing Soft Staking Service...")
       console.log(`📋 Contract Address: ${SOFT_STAKING_CONTRACT}`)
 
-      this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
+      this.provider = new ethers.providers.JsonRpcProvider(WORLDCHAIN_RPC)
       const network = await this.provider.getNetwork()
       console.log(`🌐 Connected to network: ${network.name} (${network.chainId})`)
 

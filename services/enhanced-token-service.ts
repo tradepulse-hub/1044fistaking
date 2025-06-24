@@ -74,7 +74,7 @@ class EnhancedTokenService {
       console.log("Initializing Enhanced Token Service...")
 
       // Criar provider do ethers
-      this.provider = new ethers.providers.JsonRpcProvider(WORLDCHAIN_RPC)
+      this.provider = new ethers.JsonRpcProvider(WORLDCHAIN_RPC)
 
       // Testar conexão
       const network = await this.provider.getNetwork()
@@ -113,7 +113,7 @@ class EnhancedTokenService {
       const balance = await contract.balanceOf(walletAddress)
 
       // Converter para formato legível
-      const formatted = ethers.utils.formatUnits(balance, tokenInfo.decimals)
+      const formatted = ethers.formatUnits(balance, tokenInfo.decimals)
 
       console.log(`${tokenSymbol} balance: ${formatted}`)
       return formatted

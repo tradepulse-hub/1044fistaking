@@ -4,6 +4,12 @@ import Moralis from "moralis"
 import { EvmChain } from "@moralisweb3/common-evm-utils"
 import type { MultiTokenTransaction } from "../entities/multi-token-transaction.entity"
 
+enum TransactionStatus {
+  PENDING = "pending",
+  SUCCESS = "success",
+  FAILED = "failed",
+}
+
 export class MultiTokenTransactionService {
   private readonly provider: ethers.providers.JsonRpcProvider
   private readonly contract: ethers.Contract

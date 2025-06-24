@@ -69,7 +69,7 @@ class TransactionService {
         throw new Error("World App not detected. Please open in World App.")
       }
 
-      const amountWei = ethers.parseEther(amount)
+      const amountWei = ethers.utils.parseEther(amount)
 
       const transactionPayload = {
         transaction: [
@@ -136,7 +136,7 @@ class TransactionService {
         throw new Error("World App not detected. Please open in World App.")
       }
 
-      const amountWei = ethers.parseEther(amount)
+      const amountWei = ethers.utils.parseEther(amount)
 
       const transactionPayload = {
         transaction: [

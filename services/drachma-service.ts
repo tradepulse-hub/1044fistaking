@@ -22,14 +22,14 @@ const DRACHMA_STAKING_ABI = [
 ]
 
 export class DrachmaService {
-  private provider: ethers.BrowserProvider | null = null
+  private provider: ethers.providers.Web3Provider | null = null
   private signer: ethers.Signer | null = null
   private tokenContract: ethers.Contract | null = null
   private stakingContract: ethers.Contract | null = null
 
   async initialize() {
     if (typeof window !== "undefined" && window.ethereum) {
-      this.provider = new ethers.BrowserProvider(window.ethereum)
+      this.provider = new ethers.providers.Web3Provider(window.ethereum)
       this.signer = await this.provider.getSigner()
 
       this.tokenContract = new ethers.Contract(DRACHMA_TOKEN_ADDRESS, DRACHMA_TOKEN_ABI, this.signer)

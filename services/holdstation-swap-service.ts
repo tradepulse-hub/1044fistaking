@@ -47,9 +47,9 @@ class HoldstationSwapService {
     if (this.initialized) return
 
     try {
-      console.log("🔄 Initializing Holdstation Swap Service...")
+      console.log("🔄 Initializing Holdstation Swap Service (Mock)...")
 
-      // Create ethers v6 provider
+      // Create basic ethers provider for testing
       this.provider = new ethers.JsonRpcProvider(RPC_URL)
 
       // Test connection
@@ -57,13 +57,13 @@ class HoldstationSwapService {
       console.log(`🌐 Connected to network: ${network.name} (${network.chainId})`)
 
       this.initialized = true
-      console.log("✅ Holdstation Swap Service initialized successfully")
+      console.log("✅ Holdstation Swap Service (Mock) initialized successfully")
     } catch (error) {
       console.error("❌ Failed to initialize Holdstation Swap Service:", error)
     }
   }
 
-  // Get swap quote (TPF → WDD or WDD → TPF)
+  // Get swap quote (TPF → WDD or WDD → TPF) - MOCK IMPLEMENTATION
   async getSwapQuote(
     tokenIn: string,
     tokenOut: string,
@@ -76,7 +76,7 @@ class HoldstationSwapService {
         await this.initialize()
       }
 
-      console.log("💱 Getting swap quote:", {
+      console.log("💱 Getting swap quote (MOCK):", {
         tokenIn,
         tokenOut,
         amountIn,
@@ -84,17 +84,45 @@ class HoldstationSwapService {
         fee,
       })
 
-      // Mock quote for demo (replace with real Holdstation SDK when available)
-      const mockAmountOut = (Number(amountIn) * 0.95).toString() // 5% slippage simulation
-      const formattedAmountOut = ethers.formatEther(ethers.parseEther(mockAmountOut))
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Mock quote calculation
+      const inputAmount = Number(amountIn)
+      if (inputAmount <= 0) {
+        throw new Error("Invalid input amount")
+      }
+
+      // Mock exchange rate (1 TPF = 0.5 WDD, 1 WDD = 2 TPF)
+      let outputAmount: number
+      let priceImpact: number
+
+      if (tokenIn === TPF_TOKEN && tokenOut === WDD_TOKEN) {
+        // TPF → WDD
+        outputAmount = inputAmount * 0.5
+        priceImpact = 0.1
+      } else if (tokenIn === WDD_TOKEN && tokenOut === TPF_TOKEN) {
+        // WDD → TPF
+        outputAmount = inputAmount * 2.0
+        priceImpact = 0.15
+      } else {
+        throw new Error("Unsupported token pair")
+      }
+
+      // Apply slippage
+      const slippageMultiplier = 1 - Number(slippage) / 100
+      const finalAmount = outputAmount * slippageMultiplier
 
       const quote: SwapQuote = {
-        amountOut: ethers.parseEther(mockAmountOut).toString(),
-        amountOutFormatted: formattedAmountOut,
-        priceImpact: "0.5",
-        route: {},
-        data: "0x",
-        to: ethers.ZeroAddress,
+        amountOut: ethers.parseEther(finalAmount.toString()).toString(),
+        amountOutFormatted: finalAmount.toFixed(6),
+        priceImpact: priceImpact.toString(),
+        route: {
+          path: [tokenIn, tokenOut],
+          pools: ["mock_pool"],
+        },
+        data: "0x", // Mock transaction data
+        to: "0x0000000000000000000000000000000000000000", // Mock router address
         value: "0",
         feeAmountOut: "0",
       }
@@ -102,12 +130,12 @@ class HoldstationSwapService {
       console.log("✅ Mock quote generated:", quote)
       return quote
     } catch (error) {
-      console.error("❌ Error getting swap quote:", error)
+      console.error("❌ Error getting swap quote (MOCK):", error)
       return null
     }
   }
 
-  // Execute swap using MiniKit
+  // Execute swap using MiniKit - MOCK IMPLEMENTATION
   async executeSwap(
     tokenIn: string,
     tokenOut: string,
@@ -117,7 +145,7 @@ class HoldstationSwapService {
     fee = "0.0",
   ): Promise<SwapResult> {
     try {
-      console.log("🚀 Executing swap:", {
+      console.log("🚀 Executing swap (MOCK):", {
         tokenIn,
         tokenOut,
         amountIn,
@@ -132,31 +160,19 @@ class HoldstationSwapService {
         throw new Error("World App not detected. Please open in World App.")
       }
 
-      // Prepare swap parameters using ethers v6
-      const swapParams = {
-        tokenIn,
-        tokenOut,
-        amountIn,
-        tx: {
-          data: quote.data,
-          to: quote.to,
-          value: quote.value,
-        },
-        feeAmountOut: quote.feeAmountOut,
-        fee,
-        feeReceiver: ethers.ZeroAddress, // ethers v6 syntax
-      }
+      // Mock transaction - this would normally call the actual swap contract
+      console.log("📋 Mock swap transaction would be executed here")
+      console.log("📋 Quote data:", quote)
 
-      console.log("📋 Swap parameters:", swapParams)
-
-      // Mock successful swap for demo
+      // For now, return a mock success
+      // In real implementation, this would execute the actual transaction
       return {
-        success: true,
-        transactionHash: "0x" + Math.random().toString(16).substr(2, 64),
+        success: false,
+        error: "Mock implementation - swap not actually executed. Holdstation SDK integration needed.",
         quote,
       }
     } catch (error) {
-      console.error("❌ Error executing swap:", error)
+      console.error("❌ Error executing swap (MOCK):", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -168,7 +184,7 @@ class HoldstationSwapService {
   // Swap TPF to WDD (Drachma)
   async swapTPFToWDD(amountTPF: string, slippage = "0.5"): Promise<SwapResult> {
     try {
-      console.log(`💱 Swapping ${amountTPF} TPF → WDD`)
+      console.log(`💱 Swapping ${amountTPF} TPF → WDD (MOCK)`)
 
       // Get quote
       const quote = await this.getSwapQuote(TPF_TOKEN, WDD_TOKEN, amountTPF, slippage)
@@ -196,7 +212,7 @@ class HoldstationSwapService {
   // Swap WDD (Drachma) to TPF
   async swapWDDToTPF(amountWDD: string, slippage = "0.5"): Promise<SwapResult> {
     try {
-      console.log(`💱 Swapping ${amountWDD} WDD → TPF`)
+      console.log(`💱 Swapping ${amountWDD} WDD → TPF (MOCK)`)
 
       // Get quote
       const quote = await this.getSwapQuote(WDD_TOKEN, TPF_TOKEN, amountWDD, slippage)
@@ -228,15 +244,23 @@ class HoldstationSwapService {
         await this.initialize()
       }
 
-      console.log("🧪 Testing Holdstation Swap Service...")
+      console.log("🧪 Testing Holdstation Swap Service (MOCK)...")
 
-      // Test simple quote
-      const simpleQuote = await this.getSwapQuote(TPF_TOKEN, WDD_TOKEN, "1.0")
+      // Test basic connectivity
+      if (!this.provider) {
+        console.log("❌ Provider not initialized")
+        return false
+      }
 
-      console.log("🧪 Swap Service Test Results:")
-      console.log("Simple Quote:", simpleQuote)
+      // Test network connection
+      const network = await this.provider.getNetwork()
+      console.log(`✅ Network test: ${network.name} (${network.chainId})`)
 
-      return simpleQuote !== null
+      // Test mock quote
+      const testQuote = await this.getSwapQuote(TPF_TOKEN, WDD_TOKEN, "1.0")
+      console.log(`✅ Mock quote test: ${testQuote ? "SUCCESS" : "FAILED"}`)
+
+      return testQuote !== null
     } catch (error) {
       console.error("❌ Swap service test failed:", error)
       return false

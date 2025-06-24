@@ -113,7 +113,7 @@ class EnhancedTokenService {
       const balance = await contract.balanceOf(walletAddress)
 
       // Converter para formato legível
-      const formatted = ethers.formatUnits(balance, tokenInfo.decimals)
+      const formatted = ethers.utils.formatUnits(balance, tokenInfo.decimals)
 
       console.log(`${tokenSymbol} balance: ${formatted}`)
       return formatted

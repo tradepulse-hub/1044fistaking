@@ -23,7 +23,8 @@
       "@uniswap/universal-router": ["stubs/universal-router/index.ts"],
       "@uniswap/universal-router/*": ["stubs/universal-router/*"],
       "@uniswap/universal-router-sdk": ["stubs/universal-router-sdk/index.ts"],
-      "@uniswap/universal-router-sdk/*": ["stubs/universal-router-sdk/*"]
+      "@uniswap/universal-router-sdk/*": ["stubs/universal-router-sdk/*"],
+      "bignumber.js": ["stubs/bignumber.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
